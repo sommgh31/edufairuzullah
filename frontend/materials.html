@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Materials - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 Edu Fairuzullah</h1>
+            <p>Learning Management System</p>
+        </header>
+
+        <nav>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="courses.html">Courses</a>
+                <a href="assessments.html">Assessments</a>
+                <a href="materials.html" class="active">Materials</a>
+                <a href="users.html">User Management</a>
+            </div>
+            <div class="user-info">
+                <span id="userName"></span>
+                <button onclick="logout()" style="background: #dc3545;">Logout</button>
+            </div>
+        </nav>
+
+        <div class="content">
+            <div id="message"></div>
+            
+            <h2>Learning Materials</h2>
+            
+            <div class="card">
+                <h3>Add Learning Material</h3>
+                <form id="createMaterialForm">
+                    <div class="form-group">
+                        <label>Course ID:</label>
+                        <input type="text" name="courseId" id="materialCourseId" required placeholder="Enter course ID">
+                        <small style="color: #666; font-size: 12px;">Enter the Course ID where you want to add this material</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Material Title:</label>
+                        <input type="text" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select name="type" required>
+                            <option value="">Select Type</option>
+                            <option value="video">Video</option>
+                            <option value="document">Document</option>
+                            <option value="link">Link</option>
+                            <option value="presentation">Presentation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Content/Description:</label>
+                        <textarea name="content"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>URL (if applicable):</label>
+                        <input type="url" name="url" placeholder="https://...">
+                    </div>
+                    <button type="submit">Add Material</button>
+                </form>
+            </div>
+
+            <h3>View Materials by Course</h3>
+            <div class="form-group">
+                <label>Enter Course ID:</label>
+                <input type="text" id="materialsCourseId" placeholder="Course ID">
+                <button class="btn-primary" onclick="loadMaterials()" style="margin-top: 10px;">Load Materials</button>
+            </div>
+            <div id="materialsList" class="grid"></div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Check authentication
+        if (!requireAuth()) return;
+
+        const user = getCurrentUser();
+        document.getElementById('userName').textContent = `${user.name} (${user.role})`;
+
+        document.getElementById('createMaterialForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const courseId = data.courseId;
+            delete data.courseId;
+
+            try {
+                const result = await createMaterial(courseId, data);
+                
+                if (result.message) {
+                    showMessage('Material added successfully!', 'success');
+                    e.target.reset();
+                    if (document.getElementById('materialsCourseId').value === courseId) {
+                        loadMaterials();
+                    }
+                } else {
+                    showMessage(result.error || 'Error adding material', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        });
+
+        async function loadMaterials() {
+            const courseId = document.getElementById('materialsCourseId').value;
+            if (!courseId) {
+                showMessage('Please enter a Course ID', 'error');
+                return;
+            }
+
+            try {
+                const materials = await getMaterials(courseId);
+                
+                const materialsList = document.getElementById('materialsList');
+                if (materials.length === 0) {
+                    materialsList.innerHTML = '<div class="empty-state"><h3>No materials found</h3><p>Add materials to this course</p></div>';
+                    return;
+                }
+
+                materialsList.innerHTML = materials.map(material => `
+                    <div class="card">
+                        <h3>${material.title}</h3>
+                        <p><strong>Type:</strong> ${material.type}</p>
+                        ${material.content ? `<p>${material.content}</p>` : ''}
+                        ${material.url ? `<p><strong>URL:</strong> <a href="${material.url}" target="_blank">${material.url}</a></p>` : ''}
+                        <p><strong>Material ID:</strong> <small>${material.id}</small></p>
+                        <p><strong>Course ID:</strong> <small>${material.courseId}</small></p>
+                        <div class="card-actions">
+                            <button class="btn-delete" onclick="deleteMaterialHandler('${material.courseId}', '${material.id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showMessage('Error loading materials: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteMaterialHandler(courseId, materialId) {
+            if (!confirm('Are you sure you want to delete this material?')) return;
+            
+            try {
+                const result = await deleteMaterial(courseId, materialId);
+                if (result.message) {
+                    showMessage('Material deleted successfully!', 'success');
+                    loadMaterials();
+                } else {
+                    showMessage(result.error || 'Error deleting material', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

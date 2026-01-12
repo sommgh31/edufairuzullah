@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <h2>🎓 Edu Fairuzullah</h2>
+        <h3 style="text-align: center; color: #666; margin-bottom: 30px;">Create Your Account</h3>
+        
+        <div id="message"></div>
+        
+        <form id="registerForm">
+            <div class="form-group">
+                <label>Full Name:</label>
+                <input type="text" name="name" required autocomplete="name">
+            </div>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" name="email" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" name="password" required minlength="6" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label>Role:</label>
+                <select name="role" required>
+                    <option value="">Select Role</option>
+                    <option value="educator">Educator</option>
+                    <option value="learner">Learner</option>
+                </select>
+            </div>
+            <button type="submit">Register</button>
+        </form>
+        
+        <div class="auth-links">
+            <p>Already have an account? <a href="login.html">Login here</a></p>
+        </div>
+        
+        <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+            <label>API Base URL:</label>
+            <input type="text" id="baseUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
+            <button type="button" class="btn-primary" onclick="saveApiUrl()" style="margin-top: 10px;">Save API URL</button>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Check if already logged in
+        if (isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+
+        function saveApiUrl() {
+            const url = document.getElementById('baseUrl').value;
+            localStorage.setItem('apiBaseUrl', url);
+            showMessage('API URL saved successfully!', 'success');
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const name = formData.get('name');
+            const email = formData.get('email');
+            const password = formData.get('password');
+            const role = formData.get('role');
+
+            if (!name || !email || !password || !role) {
+                showMessage('All fields are required', 'error');
+                return;
+            }
+
+            const result = await register(name, email, password, role);
+            
+            if (result.success) {
+                showMessage('Registration successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } else {
+                showMessage(result.error || 'Registration failed', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

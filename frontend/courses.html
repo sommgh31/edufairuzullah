@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courses - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 Edu Fairuzullah</h1>
+            <p>Learning Management System</p>
+        </header>
+
+        <nav>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="courses.html" class="active">Courses</a>
+                <a href="assessments.html">Assessments</a>
+                <a href="materials.html">Materials</a>
+                <a href="users.html">User Management</a>
+            </div>
+            <div class="user-info">
+                <span id="userName"></span>
+                <button onclick="logout()" style="background: #dc3545;">Logout</button>
+            </div>
+        </nav>
+
+        <div class="content">
+            <div id="message"></div>
+            
+            <h2>Course Management</h2>
+            
+            <div class="card">
+                <h3>Create New Course</h3>
+                <form id="createCourseForm">
+                    <div class="form-group">
+                        <label>Course Title:</label>
+                        <input type="text" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <textarea name="description" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Educator ID:</label>
+                        <input type="text" name="educatorId" id="educatorId" required placeholder="Enter educator UID">
+                        <small style="color: #666; font-size: 12px;">Your User ID: <span id="currentUserId"></span></small>
+                    </div>
+                    <div class="form-group">
+                        <label>Duration:</label>
+                        <input type="text" name="duration" placeholder="e.g., 8 weeks">
+                    </div>
+                    <div class="form-group">
+                        <label>Category:</label>
+                        <input type="text" name="category" placeholder="e.g., Technology, Business">
+                    </div>
+                    <button type="submit">Create Course</button>
+                </form>
+            </div>
+
+            <h3>All Courses</h3>
+            <div class="form-group">
+                <label>Filter by Category:</label>
+                <select id="filterCategory" onchange="loadCourses()">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div id="coursesList" class="grid"></div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Check authentication
+        if (!requireAuth()) return;
+
+        const user = getCurrentUser();
+        document.getElementById('userName').textContent = `${user.name} (${user.role})`;
+        
+        if (user.role === 'educator') {
+            document.getElementById('educatorId').value = user.uid;
+            document.getElementById('currentUserId').textContent = user.uid;
+        }
+
+        document.getElementById('createCourseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+
+            try {
+                const result = await createCourse(data);
+                
+                if (result.message) {
+                    showMessage('Course created successfully!', 'success');
+                    e.target.reset();
+                    if (user.role === 'educator') {
+                        document.getElementById('educatorId').value = user.uid;
+                    }
+                    loadCourses();
+                } else {
+                    showMessage(result.error || 'Error creating course', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        });
+
+        async function loadCourses() {
+            try {
+                const category = document.getElementById('filterCategory').value;
+                const courses = await getCourses(null, category || null);
+                
+                const coursesList = document.getElementById('coursesList');
+                if (courses.length === 0) {
+                    coursesList.innerHTML = '<div class="empty-state"><h3>No courses found</h3><p>Create your first course to get started</p></div>';
+                    return;
+                }
+
+                // Update category filter options
+                const categories = [...new Set(courses.map(c => c.category).filter(Boolean))];
+                const categorySelect = document.getElementById('filterCategory');
+                const currentValue = categorySelect.value;
+                categorySelect.innerHTML = '<option value="">All Categories</option>' + 
+                    categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                categorySelect.value = currentValue;
+
+                coursesList.innerHTML = courses.map(course => `
+                    <div class="card">
+                        <h3>${course.title}</h3>
+                        <p>${course.description}</p>
+                        <p><strong>Educator:</strong> ${course.educatorName || 'N/A'}</p>
+                        <p><strong>Category:</strong> ${course.category || 'General'}</p>
+                        <p><strong>Duration:</strong> ${course.duration || 'N/A'}</p>
+                        <p><strong>Enrolled:</strong> ${course.enrolledStudents ? course.enrolledStudents.length : 0} students</p>
+                        <p><strong>Course ID:</strong> <small>${course.id}</small></p>
+                        <div class="card-actions">
+                            ${user.role === 'learner' ? `<button class="btn-view" onclick="enrollInCourse('${course.id}')">Enroll</button>` : ''}
+                            ${user.role === 'educator' && course.educatorId === user.uid ? `
+                                <button class="btn-edit" onclick="editCourse('${course.id}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteCourseHandler('${course.id}')">Delete</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showMessage('Error loading courses: ' + error.message, 'error');
+            }
+        }
+
+        async function enrollInCourse(courseId) {
+            const user = getCurrentUser();
+            if (user.role !== 'learner') {
+                showMessage('Only learners can enroll in courses', 'error');
+                return;
+            }
+
+            if (!confirm('Enroll in this course?')) return;
+
+            try {
+                const result = await enrollStudent(courseId, user.uid);
+                if (result.message) {
+                    showMessage('Enrolled successfully!', 'success');
+                    loadCourses();
+                } else {
+                    showMessage(result.error || 'Error enrolling', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteCourseHandler(courseId) {
+            if (!confirm('Are you sure you want to delete this course?')) return;
+            
+            try {
+                const result = await deleteCourse(courseId);
+                if (result.message) {
+                    showMessage('Course deleted successfully!', 'success');
+                    loadCourses();
+                } else {
+                    showMessage(result.error || 'Error deleting course', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function editCourse(courseId) {
+            // Simple edit - in production, use a modal or separate page
+            const newTitle = prompt('Enter new title:');
+            if (newTitle) {
+                try {
+                    const result = await updateCourse(courseId, { title: newTitle });
+                    if (result.message) {
+                        showMessage('Course updated!', 'success');
+                        loadCourses();
+                    } else {
+                        showMessage(result.error || 'Error updating course', 'error');
+                    }
+                } catch (err) {
+                    showMessage('Error: ' + err.message, 'error');
+                }
+            }
+        }
+
+        loadCourses();
+    </script>
+</body>
+</html>

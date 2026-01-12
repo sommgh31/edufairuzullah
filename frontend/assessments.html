@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessments - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 Edu Fairuzullah</h1>
+            <p>Learning Management System</p>
+        </header>
+
+        <nav>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="courses.html">Courses</a>
+                <a href="assessments.html" class="active">Assessments</a>
+                <a href="materials.html">Materials</a>
+                <a href="users.html">User Management</a>
+            </div>
+            <div class="user-info">
+                <span id="userName"></span>
+                <button onclick="logout()" style="background: #dc3545;">Logout</button>
+            </div>
+        </nav>
+
+        <div class="content">
+            <div id="message"></div>
+            
+            <h2>Assessment Management</h2>
+            
+            <div class="card">
+                <h3>Create Assessment</h3>
+                <form id="createAssessmentForm">
+                    <div class="form-group">
+                        <label>Course ID:</label>
+                        <input type="text" name="courseId" id="assessmentCourseId" required placeholder="Enter course ID">
+                        <small style="color: #666; font-size: 12px;">Enter the Course ID where you want to create this assessment</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Assessment Title:</label>
+                        <input type="text" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <textarea name="description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date:</label>
+                        <input type="date" name="dueDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Marks:</label>
+                        <input type="number" name="totalMarks" value="100" min="0">
+                    </div>
+                    <button type="submit">Create Assessment</button>
+                </form>
+            </div>
+
+            <h3>View Assessments by Course</h3>
+            <div class="form-group">
+                <label>Enter Course ID:</label>
+                <input type="text" id="assessmentsCourseId" placeholder="Course ID">
+                <button class="btn-primary" onclick="loadAssessments()" style="margin-top: 10px;">Load Assessments</button>
+            </div>
+            <div id="assessmentsList" class="grid"></div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Check authentication
+        if (!requireAuth()) return;
+
+        const user = getCurrentUser();
+        document.getElementById('userName').textContent = `${user.name} (${user.role})`;
+
+        document.getElementById('createAssessmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const courseId = data.courseId;
+            delete data.courseId;
+
+            try {
+                const result = await createAssessment(courseId, data);
+                
+                if (result.message) {
+                    showMessage('Assessment created successfully!', 'success');
+                    e.target.reset();
+                    if (document.getElementById('assessmentsCourseId').value === courseId) {
+                        loadAssessments();
+                    }
+                } else {
+                    showMessage(result.error || 'Error creating assessment', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        });
+
+        async function loadAssessments() {
+            const courseId = document.getElementById('assessmentsCourseId').value;
+            if (!courseId) {
+                showMessage('Please enter a Course ID', 'error');
+                return;
+            }
+
+            try {
+                const assessments = await getAssessments(courseId);
+                
+                const assessmentsList = document.getElementById('assessmentsList');
+                if (assessments.length === 0) {
+                    assessmentsList.innerHTML = '<div class="empty-state"><h3>No assessments found</h3><p>Create assessments for this course</p></div>';
+                    return;
+                }
+
+                assessmentsList.innerHTML = assessments.map(assessment => `
+                    <div class="card">
+                        <h3>${assessment.title}</h3>
+                        ${assessment.description ? `<p>${assessment.description}</p>` : ''}
+                        <p><strong>Total Marks:</strong> ${assessment.totalMarks}</p>
+                        ${assessment.dueDate ? `<p><strong>Due Date:</strong> ${formatDate(assessment.dueDate)}</p>` : ''}
+                        <p><strong>Assessment ID:</strong> <small>${assessment.id}</small></p>
+                        <p><strong>Course ID:</strong> <small>${assessment.courseId}</small></p>
+                        ${user.role === 'learner' ? `
+                            <div class="card-actions">
+                                <button class="btn-view" onclick="submitAssessmentHandler('${assessment.courseId}', '${assessment.id}')">Submit</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                showMessage('Error loading assessments: ' + error.message, 'error');
+            }
+        }
+
+        function submitAssessmentHandler(courseId, assessmentId) {
+            const submissionContent = prompt('Enter your submission content:');
+            if (!submissionContent) return;
+
+            const user = getCurrentUser();
+            submitAssessment(courseId, assessmentId, {
+                studentId: user.uid,
+                submissionContent
+            }).then(result => {
+                if (result.message) {
+                    showMessage('Assessment submitted successfully!', 'success');
+                } else {
+                    showMessage(result.error || 'Error submitting assessment', 'error');
+                }
+            }).catch(err => {
+                showMessage('Error: ' + err.message, 'error');
+            });
+        }
+    </script>
+</body>
+</html>
