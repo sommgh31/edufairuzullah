@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Learner Dashboard - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Learner Dashboard</p>
+    </header>
+
+<nav>
+    <div class="nav-links">
+        <a href="learner-dashboard.html" class="active">My Courses</a>
+    </div>
+    <div class="user-info">
+        <span id="userName"></span>
+        <button onclick="logout()" style="background:#dc3545;">
+            Logout
+        </button>
+    </div>
+</nav>
+
+    <div class="content">
+        <div id="message"></div>
+
+        <h2>📚 Available Courses</h2>
+        <div id="coursesList" class="grid"></div>
+
+        <h2 style="margin-top:40px;">📝 Assessments</h2>
+        <div id="assessmentsList" class="grid"></div>
+    </div>
+</div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+
+<script>
+    // ===== AUTH CHECK =====
+    if (!requireAuth()) return;
+
+    const user = getCurrentUser();
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    if (user.role !== 'learner') {
+        alert('This page is for learners only');
+        window.location.href = 'login.html';
+    }
+
+    const API_BASE = 'http://localhost:3000';
+
+    // ===== LOAD COURSES =====
+    async function loadCourses() {
+        try {
+            const res = await fetch(`${API_BASE}/api/courses`);
+            const courses = await res.json();
+
+            const list = document.getElementById('coursesList');
+
+            if (courses.length === 0) {
+                list.innerHTML = '<p>No courses available.</p>';
+                return;
+            }
+
+            list.innerHTML = courses.map(course => `
+                <div class="card">
+                    <h3>${course.title}</h3>
+                    <p>${course.description}</p>
+                    <p><strong>Educator:</strong> ${course.educatorName}</p>
+                    <button onclick="loadAssessments('${course.id}')">
+                        View Assessments
+                    </button>
+                </div>
+            `).join('');
+        } catch (err) {
+            showMessage('Failed to load courses', 'error');
+        }
+    }
+
+    // ===== LOAD ASSESSMENTS =====
+    async function loadAssessments(courseId) {
+        try {
+            const res = await fetch(
+                `${API_BASE}/api/courses/${courseId}/assessments`
+            );
+            const assessments = await res.json();
+
+            const list = document.getElementById('assessmentsList');
+
+            if (assessments.length === 0) {
+                list.innerHTML = '<p>No assessments found.</p>';
+                return;
+            }
+
+            list.innerHTML = assessments.map(a => `
+                <div class="card">
+                    <h3>${a.title}</h3>
+                    <p>${a.description || ''}</p>
+                    <p><strong>Total Marks:</strong> ${a.totalMarks}</p>
+                    <button onclick="submitAssessment('${courseId}', '${a.id}')">
+                        Submit
+                    </button>
+                </div>
+            `).join('');
+        } catch (err) {
+            showMessage('Failed to load assessments', 'error');
+        }
+    }
+
+    // ===== SUBMIT ASSESSMENT =====
+    async function submitAssessment(courseId, assessmentId) {
+        const content = prompt('Enter your submission:');
+        if (!content) return;
+
+        try {
+            const res = await fetch(
+                `${API_BASE}/api/courses/${courseId}/assessments/${assessmentId}/submit`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: user.uid,
+                        submissionContent: content
+                    })
+                }
+            );
+
+            const result = await res.json();
+
+            if (result.message) {
+                showMessage('Assessment submitted!', 'success');
+            } else {
+                showMessage(result.error || 'Submission failed', 'error');
+            }
+        } catch (err) {
+            showMessage('Submission error', 'error');
+        }
+    }
+
+    // ===== SIMPLE MESSAGE HELPER =====
+    function showMessage(msg, type) {
+        const div = document.getElementById('message');
+        div.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+        setTimeout(() => div.innerHTML = '', 4000);
+    }
+
+    loadCourses();
+</script>
+
+</body>
+</html>

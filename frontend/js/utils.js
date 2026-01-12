@@ -1,9 +1,4 @@
 // Utility functions
-const API_BASE = () => {
-    const stored = localStorage.getItem('apiBaseUrl');
-    return stored || 'http://localhost:3000';
-};
-
 function setApiBaseUrl(url) {
     localStorage.setItem('apiBaseUrl', url);
 }

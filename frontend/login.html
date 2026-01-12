@@ -7,67 +7,110 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="auth-container">
-        <h2>🎓 Edu Fairuzullah</h2>
-        <h3 style="text-align: center; color: #666; margin-bottom: 30px;">Login to Your Account</h3>
-        
-        <div id="message"></div>
-        
-        <form id="loginForm">
-            <div class="form-group">
-                <label>Email:</label>
-                <input type="email" name="email" required autocomplete="email">
-            </div>
-            <div class="form-group">
-                <label>Password:</label>
-                <input type="password" name="password" required autocomplete="current-password">
-            </div>
-            <button type="submit">Login</button>
-        </form>
-        
-        <div class="auth-links">
-            <p>Don't have an account? <a href="register.html">Register here</a></p>
+
+<div class="auth-container">
+    <h2>🎓 Edu Fairuzullah</h2>
+    <h3 style="text-align: center; color: #666; margin-bottom: 30px;">
+        Login to Your Account
+    </h3>
+
+    <div id="message"></div>
+
+    <form id="loginForm">
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" name="email" required autocomplete="email">
         </div>
-        
-        <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-            <label>API Base URL:</label>
-            <input type="text" id="baseUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
-            <button type="button" class="btn-primary" onclick="saveApiUrl()" style="margin-top: 10px;">Save API URL</button>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" name="password" required autocomplete="current-password">
         </div>
+        <button type="submit">Login</button>
+    </form>
+
+    <div class="auth-links">
+        <p>Don't have an account? <a href="register.html">Register here</a></p>
     </div>
 
-    <script src="js/utils.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script>
-        // Check if already logged in
-        if (isAuthenticated()) {
+    <div class="form-group"
+         style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+        <label>API Base URL:</label>
+        <input type="text" id="baseUrl"
+               value="http://localhost:3000"
+               placeholder="http://localhost:3000">
+        <button type="button"
+                class="btn-primary"
+                onclick="saveApiUrl()"
+                style="margin-top: 10px;">
+            Save API URL
+        </button>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    // ===== AUTO REDIRECT IF ALREADY LOGGED IN =====
+    if (isAuthenticated()) {
+        const user = getCurrentUser();
+        redirectByRole(user);
+    }
+
+    function saveApiUrl() {
+        const url = document.getElementById('baseUrl').value.trim();
+        if (!url) {
+            showMessage('API URL cannot be empty', 'error');
+            return;
+        }
+        localStorage.setItem('apiBaseUrl', url);
+        showMessage('API URL saved successfully!', 'success');
+    }
+
+    // ===== LOGIN HANDLER =====
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const email = formData.get('email').trim();
+        const password = formData.get('password');
+
+        if (!email || !password) {
+            showMessage('Email and password are required', 'error');
+            return;
+        }
+
+        const result = await login(email, password);
+
+        if (result.success) {
+            showMessage('Login successful! Redirecting...', 'success');
+            setTimeout(() => {
+                redirectByRole(result.user);
+            }, 800);
+        } else {
+            showMessage(result.error || 'Login failed', 'error');
+        }
+    });
+
+    // ===== ROLE-BASED REDIRECTION =====
+    function redirectByRole(user) {
+        if (!user || !user.role) {
+            logout();
+            return;
+        }
+
+        if (user.role === 'educator') {
+            window.location.href = 'educator-dashboard.html';
+        } else if (user.role === 'learner') {
+            window.location.href = 'learner-dashboard.html';
+        } else {
+            // Fallback (safety)
             window.location.href = 'dashboard.html';
         }
+    }
+</script>
 
-        function saveApiUrl() {
-            const url = document.getElementById('baseUrl').value;
-            localStorage.setItem('apiBaseUrl', url);
-            showMessage('API URL saved successfully!', 'success');
-        }
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const email = formData.get('email');
-            const password = formData.get('password');
-
-            const result = await login(email, password);
-            
-            if (result.success) {
-                showMessage('Login successful! Redirecting...', 'success');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
-            } else {
-                showMessage(result.error || 'Login failed', 'error');
-            }
-        });
-    </script>
 </body>
 </html>
