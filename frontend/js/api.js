@@ -1,174 +1,220 @@
-// API functions
-const API_BASE = () => {
-    const stored = localStorage.getItem('apiBaseUrl');
-    return stored || 'http://localhost:3000';
-};
+// ===============================
+// API Client (Safe & Centralized)
+// ===============================
 
-// User API
+function API_BASE() {
+    const stored = localStorage.getItem('apiBaseUrl');
+    return stored && stored.trim()
+        ? stored.trim()
+        : 'http://localhost:3000';
+}
+
+/**
+ * Centralized fetch wrapper
+ */
+async function apiFetch(endpoint, options = {}) {
+    try {
+        const response = await fetch(`${API_BASE()}${endpoint}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            },
+            ...options
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'API request failed');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('API error:', error.message);
+        throw error;
+    }
+}
+
+// ================= USER API =================
+
 async function createUser(userData) {
-    const response = await fetch(`${API_BASE()}/api/users`, {
+    return apiFetch('/api/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
     });
-    return await response.json();
 }
 
 async function getUsers(role = null) {
-    const url = role ? `${API_BASE()}/api/users?role=${role}` : `${API_BASE()}/api/users`;
-    const response = await fetch(url);
-    return await response.json();
+    const query = role ? `?role=${encodeURIComponent(role)}` : '';
+    return apiFetch(`/api/users${query}`);
 }
 
 async function getUser(userId) {
-    const response = await fetch(`${API_BASE()}/api/users/${userId}`);
-    return await response.json();
+    return apiFetch(`/api/users/${userId}`);
 }
 
 async function updateUser(userId, userData) {
-    const response = await fetch(`${API_BASE()}/api/users/${userId}`, {
+    return apiFetch(`/api/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
     });
-    return await response.json();
 }
 
 async function deleteUser(userId) {
-    const response = await fetch(`${API_BASE()}/api/users/${userId}`, {
+    return apiFetch(`/api/users/${userId}`, {
         method: 'DELETE'
     });
-    return await response.json();
 }
 
-// Course API
+// ================= COURSE API =================
+
 async function createCourse(courseData) {
-    const response = await fetch(`${API_BASE()}/api/courses`, {
+    return apiFetch('/api/courses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(courseData)
     });
-    return await response.json();
 }
 
 async function getCourses(educatorId = null, category = null) {
-    let url = `${API_BASE()}/api/courses`;
     const params = [];
-    if (educatorId) params.push(`educatorId=${educatorId}`);
-    if (category) params.push(`category=${category}`);
-    if (params.length > 0) url += '?' + params.join('&');
-    
-    const response = await fetch(url);
-    return await response.json();
+    if (educatorId) params.push(`educatorId=${encodeURIComponent(educatorId)}`);
+    if (category) params.push(`category=${encodeURIComponent(category)}`);
+    const query = params.length ? `?${params.join('&')}` : '';
+
+    return apiFetch(`/api/courses${query}`);
 }
 
 async function getCourse(courseId) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}`);
-    return await response.json();
+    return apiFetch(`/api/courses/${courseId}`);
 }
 
 async function updateCourse(courseId, courseData) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}`, {
+    return apiFetch(`/api/courses/${courseId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(courseData)
     });
-    return await response.json();
 }
 
 async function deleteCourse(courseId) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}`, {
+    return apiFetch(`/api/courses/${courseId}`, {
         method: 'DELETE'
     });
-    return await response.json();
 }
 
 async function enrollStudent(courseId, studentId) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/enroll`, {
+    return apiFetch(`/api/courses/${courseId}/enroll`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId })
     });
-    return await response.json();
 }
 
-// Material API
-async function createMaterial(courseId, materialData) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/materials`, {
+async function unenrollStudent(courseId, studentId) {
+    return apiFetch(`/api/courses/${courseId}/unenroll`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId })
+    });
+}
+
+// ================= MATERIAL API =================
+
+async function createMaterial(courseId, materialData) {
+    return apiFetch(`/api/courses/${courseId}/materials`, {
+        method: 'POST',
         body: JSON.stringify(materialData)
     });
-    return await response.json();
 }
 
 async function getMaterials(courseId) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/materials`);
-    return await response.json();
+    return apiFetch(`/api/courses/${courseId}/materials`);
 }
 
 async function getMaterial(courseId, materialId) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/materials/${materialId}`);
-    return await response.json();
+    return apiFetch(`/api/courses/${courseId}/materials/${materialId}`);
 }
 
 async function updateMaterial(courseId, materialId, materialData) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/materials/${materialId}`, {
+    return apiFetch(`/api/courses/${courseId}/materials/${materialId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(materialData)
     });
-    return await response.json();
 }
 
 async function deleteMaterial(courseId, materialId) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/materials/${materialId}`, {
+    return apiFetch(`/api/courses/${courseId}/materials/${materialId}`, {
         method: 'DELETE'
     });
-    return await response.json();
 }
 
-// Assessment API
+// ================= ASSESSMENT API =================
+
 async function createAssessment(courseId, assessmentData) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/assessments`, {
+    return apiFetch(`/api/courses/${courseId}/assessments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(assessmentData)
     });
-    return await response.json();
 }
 
 async function getAssessments(courseId) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/assessments`);
-    return await response.json();
+    return apiFetch(`/api/courses/${courseId}/assessments`);
 }
 
 async function submitAssessment(courseId, assessmentId, submissionData) {
-    const response = await fetch(`${API_BASE()}/api/courses/${courseId}/assessments/${assessmentId}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionData)
-    });
-    return await response.json();
+    return apiFetch(
+        `/api/courses/${courseId}/assessments/${assessmentId}/submit`,
+        {
+            method: 'POST',
+            body: JSON.stringify(submissionData)
+        }
+    );
 }
 
+// ================= SUBMISSION API =================
+
 async function getSubmissions(studentId = null, courseId = null, assessmentId = null) {
-    let url = `${API_BASE()}/api/submissions`;
     const params = [];
-    if (studentId) params.push(`studentId=${studentId}`);
-    if (courseId) params.push(`courseId=${courseId}`);
-    if (assessmentId) params.push(`assessmentId=${assessmentId}`);
-    if (params.length > 0) url += '?' + params.join('&');
-    
-    const response = await fetch(url);
-    return await response.json();
+    if (studentId) params.push(`studentId=${encodeURIComponent(studentId)}`);
+    if (courseId) params.push(`courseId=${encodeURIComponent(courseId)}`);
+    if (assessmentId) params.push(`assessmentId=${encodeURIComponent(assessmentId)}`);
+    const query = params.length ? `?${params.join('&')}` : '';
+
+    return apiFetch(`/api/submissions${query}`);
 }
 
 async function gradeSubmission(submissionId, marks, feedback = '') {
-    const response = await fetch(`${API_BASE()}/api/submissions/${submissionId}/grade`, {
+    return apiFetch(`/api/submissions/${submissionId}/grade`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ marks, feedback })
     });
-    return await response.json();
+}
+
+async function updateSubmission(submissionId, submissionData) {
+    return apiFetch(`/api/submissions/${submissionId}`, {
+        method: 'PUT',
+        body: JSON.stringify(submissionData)
+    });
+}
+
+async function deleteSubmission(submissionId) {
+    return apiFetch(`/api/submissions/${submissionId}`, {
+        method: 'DELETE'
+    });
+}
+
+// ================= DERIVED / HELPER API =================
+
+/**
+ * Get courses enrolled by a learner
+ * (Client-side derived API)
+ */
+async function getEnrolledCourses(studentId) {
+    if (!studentId) {
+        throw new Error('Student ID is required');
+    }
+
+    const courses = await getCourses();
+
+    return courses.filter(course =>
+        Array.isArray(course.enrolledStudents) &&
+        course.enrolledStudents.includes(studentId)
+    );
 }

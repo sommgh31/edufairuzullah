@@ -1,51 +1,88 @@
-// Utility functions
+// ===============================
+// Utility Functions (UI & Session)
+// ===============================
+
+/**
+ * Save API base URL
+ */
 function setApiBaseUrl(url) {
-    localStorage.setItem('apiBaseUrl', url);
+    if (!url || typeof url !== 'string') return;
+    localStorage.setItem('apiBaseUrl', url.trim());
 }
 
+/**
+ * Show alert message on page
+ * type: success | error | warning | info
+ */
 function showMessage(message, type = 'success') {
-    const messageDiv = document.getElementById('message');
-    if (!messageDiv) {
-        // Create message div if it doesn't exist
-        const div = document.createElement('div');
-        div.id = 'message';
-        document.querySelector('.content')?.prepend(div) || document.body.prepend(div);
+    if (!message) return;
+
+    let messageElement = document.getElementById('message');
+
+    // Create message container if it doesn't exist
+    if (!messageElement) {
+        messageElement = document.createElement('div');
+        messageElement.id = 'message';
+
+        const content = document.querySelector('.content');
+        if (content) {
+            content.prepend(messageElement);
+        } else {
+            document.body.prepend(messageElement);
+        }
     }
-    
-    const messageElement = document.getElementById('message');
-    messageElement.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+
+    messageElement.innerHTML = `
+        <div class="alert alert-${type}">
+            ${message}
+        </div>
+    `;
+
+    // Auto clear message
     setTimeout(() => {
         if (messageElement) {
             messageElement.innerHTML = '';
         }
-    }, 5000);
+    }, 4000);
 }
 
+/**
+ * Format date safely
+ */
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
+
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+    if (isNaN(date.getTime())) return 'Invalid date';
+
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 }
 
-function checkAuth() {
-    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (!user) {
-        window.location.href = 'login.html';
-        return null;
-    }
-    return user;
-}
-
+/**
+ * Logout user safely
+ */
 function logout() {
+    // Clear session
     localStorage.removeItem('currentUser');
     localStorage.removeItem('authToken');
-    window.location.href = 'login.html';
+
+    // Prevent redirect loops
+    if (!window.location.pathname.endsWith('login.html')) {
+        window.location.href = 'login.html';
+    }
 }
 
+/**
+ * Get current logged-in user (if any)
+ */
 function getCurrentUser() {
-    return JSON.parse(localStorage.getItem('currentUser') || 'null');
+    try {
+        return JSON.parse(localStorage.getItem('currentUser')) || null;
+    } catch {
+        return null;
+    }
 }

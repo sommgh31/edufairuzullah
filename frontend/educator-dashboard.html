@@ -3,124 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Edu Fairuzullah LMS</title>
+    <title>Educator Dashboard - Edu Fairuzullah LMS</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎓 Edu Fairuzullah</h1>
-            <p>Learning Management System</p>
-        </header>
 
-        <nav>
-            <div class="nav-links">
-                <a href="dashboard.html" class="active">Dashboard</a>
-                <a href="courses.html">Courses</a>
-                <a href="assessments.html">Assessments</a>
-                <a href="materials.html">Materials</a>
-                <a href="users.html">User Management</a>
-            </div>
-            <div class="user-info">
-                <span id="userName"></span>
-                <button onclick="logout()" style="background: #dc3545;">Logout</button>
-            </div>
-        </nav>
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Educator Dashboard</p>
+    </header>
 
-        <div class="content">
-            <div id="message"></div>
-            
-            <h2>Welcome to Your Dashboard</h2>
-            
-            <div class="dashboard-stats" id="stats">
-                <div class="stat-card">
-                    <h3 id="totalCourses">-</h3>
-                    <p>Total Courses</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalAssessments">-</h3>
-                    <p>Total Assessments</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalUsers">-</h3>
-                    <p>Total Users</p>
-                </div>
-            </div>
+    <nav>
+        <div class="nav-links">
+            <a href="educator-dashboard.html" class="active">Dashboard</a>
+            <a href="educator-my-courses.html">My Courses</a>
+            <a href="educator-view-users.html">View Users</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+        </div>
+    </nav>
 
-            <div class="card">
-                <h3>Quick Actions</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
-                    <a href="courses.html" class="btn-primary" style="text-align: center; text-decoration: none;">View Courses</a>
-                    <a href="assessments.html" class="btn-primary" style="text-align: center; text-decoration: none;">View Assessments</a>
-                    <a href="materials.html" class="btn-primary" style="text-align: center; text-decoration: none;">Manage Materials</a>
-                    <a href="users.html" class="btn-primary" style="text-align: center; text-decoration: none;">Manage Users</a>
-                </div>
-            </div>
+    <div class="content">
+        <div id="message"></div>
 
-            <div class="card">
-                <h3>Recent Courses</h3>
-                <div id="recentCourses" class="grid"></div>
+        <h2>Welcome, Educator</h2>
+
+        <!-- DASHBOARD STATS -->
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <h3 id="totalCourses">-</h3>
+                <p>My Courses</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalAssessments">-</h3>
+                <p>Total Assessments</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalUsers">-</h3>
+                <p>Registered Users</p>
             </div>
         </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="card">
+            <h3>Quick Actions</h3>
+            <div class="grid">
+                <a href="educator-my-courses.html" class="btn-primary">Manage My Courses</a>
+                <a href="educator-view-users.html" class="btn-primary">View Users</a>
+            </div>
+        </div>
+
+        <!-- RECENT COURSES -->
+        <div class="card">
+            <h3>Recent My Courses</h3>
+            <div id="recentCourses" class="grid"></div>
+        </div>
     </div>
+</div>
 
-    <script src="js/utils.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script>
-        // Check authentication
-        if (!requireAuth()) return;
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
 
-        const user = getCurrentUser();
-        document.getElementById('userName').textContent = `${user.name} (${user.role})`;
+<script>
+    // ===== AUTH CHECK =====
+    if (!requireAuth()) {
+    window.location.href = 'login.html';
+}
 
-        async function loadDashboard() {
-            try {
-                // Load stats
-                const [courses, users] = await Promise.all([
-                    getCourses(),
-                    getUsers()
-                ]);
+    const user = getCurrentUser();
+    if (user.role !== 'educator') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
 
-                document.getElementById('totalCourses').textContent = courses.length || 0;
-                document.getElementById('totalUsers').textContent = users.length || 0;
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
 
-                // Load recent courses
-                const coursesList = document.getElementById('recentCourses');
-                if (courses.length === 0) {
-                    coursesList.innerHTML = '<div class="empty-state"><h3>No courses found</h3><p>Create your first course to get started</p></div>';
-                } else {
-                    const recentCourses = courses.slice(0, 6);
-                    coursesList.innerHTML = recentCourses.map(course => `
-                        <div class="card">
-                            <h3>${course.title}</h3>
-                            <p>${course.description || 'No description'}</p>
-                            <p><strong>Educator:</strong> ${course.educatorName || 'N/A'}</p>
-                            <p><strong>Category:</strong> ${course.category || 'General'}</p>
-                            <div class="card-actions">
-                                <a href="courses.html" class="btn-view">View Course</a>
-                            </div>
-                        </div>
-                    `).join('');
-                }
+    // ===== LOAD DASHBOARD =====
+    async function loadDashboard() {
+        try {
+            // Get educator courses only
+            const courses = await getCourses(user.uid);
+            const users = await getUsers();
 
-                // Count assessments (would need to fetch from all courses)
-                let totalAssessments = 0;
-                for (const course of courses.slice(0, 5)) {
-                    try {
-                        const assessments = await getAssessments(course.id);
-                        totalAssessments += assessments.length;
-                    } catch (e) {
-                        // Ignore errors
-                    }
-                }
-                document.getElementById('totalAssessments').textContent = totalAssessments || '-';
-            } catch (error) {
-                showMessage('Error loading dashboard: ' + error.message, 'error');
+            document.getElementById('totalCourses').textContent = courses.length;
+            document.getElementById('totalUsers').textContent = users.length;
+
+            // Count assessments under educator courses
+            let assessmentCount = 0;
+            for (const course of courses) {
+                const assessments = await getAssessments(course.id);
+                assessmentCount += assessments.length;
             }
-        }
+            document.getElementById('totalAssessments').textContent = assessmentCount;
 
-        loadDashboard();
-    </script>
+            // Recent courses
+            const recentCourses = courses.slice(0, 4);
+            const list = document.getElementById('recentCourses');
+
+            if (recentCourses.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No courses yet</h3>
+                        <p>Create your first course to get started.</p>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = recentCourses.map(course => `
+                <div class="card">
+                    <h3>${course.title}</h3>
+                    <p>${course.description || 'No description'}</p>
+                    <div class="card-actions">
+                        <a href="educator-course-details.html?courseId=${course.id}"
+                           class="btn-view">
+                            View Course
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+
+        } catch (error) {
+            showMessage('Failed to load dashboard', 'error');
+        }
+    }
+
+    loadDashboard();
+</script>
+
 </body>
 </html>

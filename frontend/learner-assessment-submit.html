@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Assessment - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Learner - Assessment Submission</p>
+    </header>
+
+    <nav>
+        <div class="nav-links">
+            <a href="learner-dashboard.html">Dashboard</a>
+            <a href="learner-my-courses.html">My Courses</a>
+            <a href="#" class="active">Assessment</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div id="message"></div>
+
+        <!-- ASSESSMENT INFO -->
+        <div class="card">
+            <h2 id="assessmentTitle">Assessment</h2>
+            <p id="assessmentDescription"></p>
+            <p><strong>Total Marks:</strong> <span id="totalMarks"></span></p>
+        </div>
+
+        <!-- SUBMISSION FORM -->
+        <div class="card">
+            <h3>Your Submission</h3>
+
+            <textarea id="submissionContent"
+                      rows="8"
+                      placeholder="Enter your submission here..."></textarea>
+
+            <div class="card-actions" style="margin-top:15px;">
+                <button id="submitBtn" class="btn-primary"
+                        onclick="submit()">
+                    Submit
+                </button>
+
+                <button id="updateBtn" class="btn-primary"
+                        onclick="update()"
+                        style="display:none;">
+                    Update
+                </button>
+
+                <button id="deleteBtn" class="btn-delete"
+                        onclick="removeSubmission()"
+                        style="display:none;">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    // ===== AUTH CHECK =====
+    if (!requireAuth()) {
+    window.location.href = 'login.html';
+}
+
+
+    const user = getCurrentUser();
+    if (user.role !== 'learner') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
+
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    // ===== URL PARAMS =====
+    const params = new URLSearchParams(window.location.search);
+    const courseId = params.get('courseId');
+    const assessmentId = params.get('assessmentId');
+
+    if (!courseId || !assessmentId) {
+        showMessage('Invalid assessment', 'error');
+        setTimeout(() => {
+            window.location.href = 'learner-my-courses.html';
+        }, 1500);
+    }
+
+    let submissionId = null;
+
+    // ===== LOAD ASSESSMENT =====
+    async function loadAssessment() {
+        try {
+            const assessments = await getAssessments(courseId);
+            const assessment = assessments.find(a => a.id === assessmentId);
+
+            if (!assessment) throw new Error();
+
+            document.getElementById('assessmentTitle').textContent =
+                assessment.title;
+            document.getElementById('assessmentDescription').textContent =
+                assessment.description || 'No description';
+            document.getElementById('totalMarks').textContent =
+                assessment.totalMarks || 'N/A';
+
+        } catch {
+            showMessage('Assessment not found', 'error');
+        }
+    }
+
+    // ===== LOAD SUBMISSION =====
+    async function loadSubmission() {
+        try {
+            const submissions = await getSubmissions(
+                user.uid,
+                courseId,
+                assessmentId
+            );
+
+            if (submissions.length > 0) {
+                const sub = submissions[0];
+                submissionId = sub.id;
+
+                document.getElementById('submissionContent').value =
+                    sub.submissionContent || '';
+
+                document.getElementById('submitBtn').style.display = 'none';
+                document.getElementById('updateBtn').style.display = 'inline-block';
+                document.getElementById('deleteBtn').style.display = 'inline-block';
+            }
+        } catch {
+            // No submission yet (normal case)
+        }
+    }
+
+    // ===== SUBMIT =====
+    async function submit() {
+        const content =
+            document.getElementById('submissionContent').value.trim();
+
+        if (!content) {
+            showMessage('Submission cannot be empty', 'error');
+            return;
+        }
+
+        try {
+            await submitAssessment(courseId, assessmentId, {
+                studentId: user.uid,
+                submissionContent: content
+            });
+
+            showMessage('Submission successful', 'success');
+            loadSubmission();
+        } catch {
+            showMessage('Submission failed', 'error');
+        }
+    }
+
+    // ===== UPDATE =====
+    async function update() {
+        const content =
+            document.getElementById('submissionContent').value.trim();
+
+        if (!content) {
+            showMessage('Submission cannot be empty', 'error');
+            return;
+        }
+
+        try {
+            await updateSubmission(submissionId, {
+                submissionContent: content
+            });
+
+            showMessage('Submission updated', 'success');
+        } catch {
+            showMessage('Update failed', 'error');
+        }
+    }
+
+    // ===== DELETE =====
+    async function removeSubmission() {
+        if (!confirm('Delete this submission?')) return;
+
+        try {
+            await deleteSubmission(submissionId);
+            submissionId = null;
+
+            document.getElementById('submissionContent').value = '';
+            document.getElementById('submitBtn').style.display = 'inline-block';
+            document.getElementById('updateBtn').style.display = 'none';
+            document.getElementById('deleteBtn').style.display = 'none';
+
+            showMessage('Submission deleted', 'success');
+        } catch {
+            showMessage('Delete failed', 'error');
+        }
+    }
+
+    loadAssessment();
+    loadSubmission();
+</script>
+
+</body>
+</html>

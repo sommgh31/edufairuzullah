@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Course - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Educator - Create Course</p>
+    </header>
+
+    <nav>
+        <div class="nav-links">
+            <a href="educator-dashboard.html">Dashboard</a>
+            <a href="educator-my-courses.html">My Courses</a>
+            <a href="#" class="active">Create Course</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div id="message"></div>
+
+        <div class="card">
+            <h3>Create New Course</h3>
+
+            <div class="form-group">
+                <label>Course Title</label>
+                <input type="text" id="title" placeholder="Enter course title">
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="description" rows="4"
+                          placeholder="Course description"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" id="category" placeholder="e.g. Programming">
+            </div>
+
+            <div class="card-actions">
+                <button
+                    type="button"
+                    class="btn-primary"
+                    onclick="createCourseHandler();">
+                    Create Course
+                </button>
+                <a href="educator-my-courses.html" class="btn-view">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    console.log('Create Course page loaded'); //debug line
+    // ===== AUTH CHECK =====
+if (!requireAuth()) {
+    window.location.href = 'login.html';
+}
+
+const user = getCurrentUser();
+    console.log('Current user:', user); //debug line
+    if (user.role !== 'educator') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
+
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    // ===== CREATE COURSE =====
+async function createCourseHandler() {
+    alert('Create course clicked'); 
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const category = document.getElementById('category').value.trim();
+
+    if (!title) {
+        showMessage('Course title is required', 'error');
+        return;
+    }
+
+    try {
+        await createCourse({
+            title,
+            description,
+            category,
+            educatorId: user.uid,
+            educatorName: user.name,
+            enrolledStudents: [],
+            createdAt: new Date().toISOString()
+        });
+
+        showMessage('Course created successfully!', 'success');
+
+        setTimeout(() => {
+            window.location.href = 'educator-my-courses.html';
+        }, 1000);
+
+    } catch (error) {
+        console.error(error);
+        showMessage(error.message || 'Failed to create course', 'error');
+    }
+}
+
+</script>
+
+</body>
+</html>

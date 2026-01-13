@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Courses - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Educator - My Courses</p>
+    </header>
+
+    <nav>
+        <div class="nav-links">
+            <a href="educator-dashboard.html">Dashboard</a>
+            <a href="educator-my-courses.html" class="active">My Courses</a>
+            <a href="educator-view-users.html">View Users</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div id="message"></div>
+
+        <!-- ACTION BAR -->
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>My Courses</h3>
+            <a href="educator-createcourse.html" class="btn-primary">
+                + Create Course
+            </a>
+        </div>
+
+        <!-- COURSE LIST -->
+        <div id="coursesList" class="grid"></div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    // ===== AUTH CHECK =====
+    if (!requireAuth()) {
+    window.location.href = 'login.html';
+}
+
+    const user = getCurrentUser();
+    if (user.role !== 'educator') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
+
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    // ===== LOAD COURSES =====
+    async function loadCourses() {
+        try {
+            const courses = await getCourses(user.uid);
+            const list = document.getElementById('coursesList');
+
+            if (!courses.length) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No courses yet</h3>
+                        <p>Click <strong>Create Course</strong> to add your first course.</p>
+                    </div>`;
+                return;
+            }
+
+list.innerHTML = courses.map(course => `
+    <div class="card">
+        <h3>${course.title}</h3>
+        <p>${course.description || 'No description'}</p>
+        <p><strong>Category:</strong> ${course.category || 'General'}</p>
+
+        <div class="card-actions">
+            <a href="educator-editcourse.html?courseId=${course.id}"
+               class="btn-view">
+                Edit
+            </a>
+
+            <a href="educator-course-details.html?courseId=${course.id}"
+               class="btn-view">
+                Manage
+            </a>
+
+            <button class="btn-delete"
+                    onclick="remove('${course.id}')">
+                Delete
+            </button>
+        </div>
+    </div>
+`).join('');
+
+        } catch {
+            showMessage('Failed to load courses', 'error');
+        }
+    }
+
+    // ===== DELETE COURSE =====
+    async function remove(courseId) {
+        if (!confirm('Delete this course?')) return;
+
+        try {
+            await deleteCourse(courseId);
+            showMessage('Course deleted', 'success');
+            loadCourses();
+        } catch {
+            showMessage('Failed to delete course', 'error');
+        }
+    }
+
+    loadCourses();
+</script>
+
+</body>
+</html>

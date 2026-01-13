@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Details - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Learner - Course Details</p>
+    </header>
+
+    <nav>
+        <div class="nav-links">
+            <a href="learner-dashboard.html">Dashboard</a>
+            <a href="learner-my-courses.html">My Courses</a>
+            <a href="#" class="active">Course Details</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div id="message"></div>
+
+        <!-- COURSE INFO -->
+        <div class="card">
+            <h2 id="courseTitle">Course</h2>
+            <p id="courseDescription"></p>
+            <p><strong>Educator:</strong> <span id="courseEducator"></span></p>
+        </div>
+
+        <!-- ASSESSMENTS -->
+        <div class="card">
+            <h3>Assessments</h3>
+            <div id="assessmentsList" class="grid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    // ===== AUTH CHECK =====
+    if (!requireAuth()) {
+    window.location.href = 'login.html';
+}
+
+
+    const user = getCurrentUser();
+    if (user.role !== 'learner') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
+
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    // ===== GET COURSE ID =====
+    const params = new URLSearchParams(window.location.search);
+    const courseId = params.get('courseId');
+
+    if (!courseId) {
+        showMessage('Invalid course', 'error');
+        setTimeout(() => {
+            window.location.href = 'learner-my-courses.html';
+        }, 1500);
+    }
+
+    // ===== LOAD COURSE DETAILS =====
+    async function loadCourse() {
+        try {
+            const course = await getCourse(courseId);
+
+            document.getElementById('courseTitle').textContent =
+                course.title;
+            document.getElementById('courseDescription').textContent =
+                course.description || 'No description';
+            document.getElementById('courseEducator').textContent =
+                course.educatorName || 'N/A';
+        } catch (error) {
+            showMessage('Failed to load course', 'error');
+        }
+    }
+
+    // ===== LOAD ASSESSMENTS =====
+    async function loadAssessments() {
+        try {
+            const assessments = await getAssessments(courseId);
+            const list = document.getElementById('assessmentsList');
+
+            if (!assessments.length) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <p>No assessments available for this course.</p>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = assessments.map(a => `
+                <div class="card">
+                    <h3>${a.title}</h3>
+                    <p>${a.description || 'No description'}</p>
+                    <p><strong>Total Marks:</strong> ${a.totalMarks || 'N/A'}</p>
+
+                    <div class="card-actions">
+                        <a href="learner-assessment-submit.html
+                                ?courseId=${courseId}
+                                &assessmentId=${a.id}"
+                           class="btn-primary">
+                            Submit / View Submission
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            showMessage('Failed to load assessments', 'error');
+        }
+    }
+
+    loadCourse();
+    loadAssessments();
+</script>
+
+</body>
+</html>

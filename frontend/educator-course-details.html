@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Course - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Educator - Course Management</p>
+    </header>
+
+    <nav>
+        <div class="nav-links">
+            <a href="educator-dashboard.html">Dashboard</a>
+            <a href="educator-my-courses.html">My Courses</a>
+            <a href="#" class="active">Course Details</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div id="message"></div>
+
+        <!-- COURSE INFO -->
+        <div class="card">
+            <h2 id="courseTitle">Course</h2>
+            <p id="courseDescription"></p>
+            <p><strong>Category:</strong> <span id="courseCategory"></span></p>
+        </div>
+
+        <!-- CREATE ASSESSMENT -->
+        <div class="card">
+            <h3>Create Assessment</h3>
+
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="assessmentTitle">
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="assessmentDescription" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Total Marks</label>
+                <input type="number" id="totalMarks">
+            </div>
+
+            <button class="btn-primary" onclick="createAssessmentHandler()">
+                Create Assessment
+            </button>
+        </div>
+
+        <!-- ASSESSMENTS LIST -->
+        <div class="card">
+            <h3>Assessments</h3>
+            <div id="assessmentsList" class="grid"></div>
+        </div>
+
+        <!-- CREATE MATERIAL -->
+        <div class="card">
+            <h3>Add Material</h3>
+
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="materialTitle">
+            </div>
+
+            <div class="form-group">
+                <label>Content / Link</label>
+                <textarea id="materialContent" rows="3"></textarea>
+            </div>
+
+            <button class="btn-primary" onclick="createMaterialHandler()">
+                Add Material
+            </button>
+        </div>
+
+        <!-- MATERIALS LIST -->
+        <div class="card">
+            <h3>Materials</h3>
+            <div id="materialsList" class="grid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    // ===== AUTH CHECK =====
+    if (!requireAuth()) {
+    window.location.href = 'login.html';
+}
+
+    const user = getCurrentUser();
+    if (user.role !== 'educator') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
+
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    // ===== URL PARAM =====
+    const params = new URLSearchParams(window.location.search);
+    const courseId = params.get('courseId');
+
+    if (!courseId) {
+        showMessage('Invalid course', 'error');
+        setTimeout(() => {
+            window.location.href = 'educator-my-courses.html';
+        }, 1500);
+    }
+
+    // ===== LOAD COURSE =====
+    async function loadCourse() {
+        try {
+            const course = await getCourse(courseId);
+
+            // Ownership check
+            if (course.educatorId !== user.uid) {
+                showMessage('Unauthorized access', 'error');
+                setTimeout(logout, 1500);
+            }
+
+            document.getElementById('courseTitle').textContent = course.title;
+            document.getElementById('courseDescription').textContent =
+                course.description || 'No description';
+            document.getElementById('courseCategory').textContent =
+                course.category || 'General';
+        } catch {
+            showMessage('Failed to load course', 'error');
+        }
+    }
+
+    // ===== ASSESSMENTS =====
+    async function loadAssessments() {
+        try {
+            const assessments = await getAssessments(courseId);
+            const list = document.getElementById('assessmentsList');
+
+            if (!assessments.length) {
+                list.innerHTML = '<p>No assessments created.</p>';
+                return;
+            }
+
+            list.innerHTML = assessments.map(a => `
+                <div class="card">
+                    <h3>${a.title}</h3>
+                    <p>${a.description || ''}</p>
+                    <p><strong>Marks:</strong> ${a.totalMarks}</p>
+
+                    <div class="card-actions">
+                        <a href="educator-grade.html?assessmentId=${a.id}&courseId=${courseId}"
+                           class="btn-view">
+                            View Submissions
+                        </a>
+                        <button class="btn-delete"
+                                onclick="deleteAssessmentHandler('${a.id}')">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch {
+            showMessage('Failed to load assessments', 'error');
+        }
+    }
+
+    async function createAssessmentHandler() {
+        const title = document.getElementById('assessmentTitle').value.trim();
+        const description = document.getElementById('assessmentDescription').value.trim();
+        const totalMarks = document.getElementById('totalMarks').value;
+
+        if (!title || !totalMarks) {
+            showMessage('Title and marks are required', 'error');
+            return;
+        }
+
+        try {
+            await createAssessment(courseId, {
+                title,
+                description,
+                totalMarks
+            });
+
+            showMessage('Assessment created', 'success');
+            document.getElementById('assessmentTitle').value = '';
+            document.getElementById('assessmentDescription').value = '';
+            document.getElementById('totalMarks').value = '';
+
+            loadAssessments();
+        } catch {
+            showMessage('Failed to create assessment', 'error');
+        }
+    }
+
+    async function deleteAssessmentHandler(id) {
+        if (!confirm('Delete this assessment?')) return;
+
+        try {
+            await apiFetch(`/api/courses/${courseId}/assessments/${id}`, {
+                method: 'DELETE'
+            });
+
+            showMessage('Assessment deleted', 'success');
+            loadAssessments();
+        } catch {
+            showMessage('Delete failed', 'error');
+        }
+    }
+
+    // ===== MATERIALS =====
+    async function loadMaterials() {
+        try {
+            const materials = await getMaterials(courseId);
+            const list = document.getElementById('materialsList');
+
+            if (!materials.length) {
+                list.innerHTML = '<p>No materials added.</p>';
+                return;
+            }
+
+            list.innerHTML = materials.map(m => `
+                <div class="card">
+                    <h3>${m.title}</h3>
+                    <p>${m.content}</p>
+
+                    <div class="card-actions">
+                        <button class="btn-delete"
+                                onclick="deleteMaterialHandler('${m.id}')">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch {
+            showMessage('Failed to load materials', 'error');
+        }
+    }
+
+    async function createMaterialHandler() {
+        const title = document.getElementById('materialTitle').value.trim();
+        const content = document.getElementById('materialContent').value.trim();
+
+        if (!title || !content) {
+            showMessage('All fields are required', 'error');
+            return;
+        }
+
+        try {
+            await createMaterial(courseId, { title, content });
+
+            showMessage('Material added', 'success');
+            document.getElementById('materialTitle').value = '';
+            document.getElementById('materialContent').value = '';
+
+            loadMaterials();
+        } catch {
+            showMessage('Failed to add material', 'error');
+        }
+    }
+
+    async function deleteMaterialHandler(id) {
+        if (!confirm('Delete this material?')) return;
+
+        try {
+            await deleteMaterial(courseId, id);
+            showMessage('Material deleted', 'success');
+            loadMaterials();
+        } catch {
+            showMessage('Delete failed', 'error');
+        }
+    }
+
+    loadCourse();
+    loadAssessments();
+    loadMaterials();
+</script>
+
+</body>
+</html>

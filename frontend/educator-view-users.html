@@ -42,7 +42,9 @@
 
 <script>
     // ===== AUTH CHECK =====
-    if (!requireAuth()) return;
+    if (!requireAuth()) {
+    window.location.href = 'login.html';
+}
 
     const currentUser = getCurrentUser();
     if (currentUser.role !== 'educator') {

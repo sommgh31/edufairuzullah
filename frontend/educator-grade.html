@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Submissions - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Educator - Grade Submissions</p>
+    </header>
+
+    <nav>
+        <div class="nav-links">
+            <a href="educator-dashboard.html">Dashboard</a>
+            <a href="educator-my-courses.html">My Courses</a>
+            <a href="#" class="active">Grading</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div id="message"></div>
+
+        <!-- ASSESSMENT INFO -->
+        <div class="card">
+            <h2 id="assessmentTitle">Assessment</h2>
+            <p id="assessmentDescription"></p>
+            <p><strong>Total Marks:</strong> <span id="totalMarks"></span></p>
+        </div>
+
+        <!-- SUBMISSIONS -->
+        <div class="card">
+            <h3>Learner Submissions</h3>
+            <div id="submissionsList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    // ===== AUTH CHECK =====
+    if (!requireAuth()) return;
+
+    const user = getCurrentUser();
+    if (user.role !== 'educator') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
+
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    // ===== URL PARAMS =====
+    const params = new URLSearchParams(window.location.search);
+    const assessmentId = params.get('assessmentId');
+    const courseId = params.get('courseId');
+
+    if (!assessmentId || !courseId) {
+        showMessage('Invalid assessment', 'error');
+        setTimeout(() => {
+            window.location.href = 'educator-my-courses.html';
+        }, 1500);
+    }
+
+    // ===== LOAD ASSESSMENT =====
+    async function loadAssessment() {
+        try {
+            const assessments = await getAssessments(courseId);
+            const assessment = assessments.find(a => a.id === assessmentId);
+
+            if (!assessment) throw new Error();
+
+            document.getElementById('assessmentTitle').textContent =
+                assessment.title;
+            document.getElementById('assessmentDescription').textContent =
+                assessment.description || 'No description';
+            document.getElementById('totalMarks').textContent =
+                assessment.totalMarks;
+        } catch {
+            showMessage('Failed to load assessment', 'error');
+        }
+    }
+
+    // ===== LOAD SUBMISSIONS =====
+    async function loadSubmissions() {
+        try {
+            const submissions = await getSubmissions(
+                null,
+                courseId,
+                assessmentId
+            );
+
+            const list = document.getElementById('submissionsList');
+
+            if (!submissions.length) {
+                list.innerHTML = '<p>No submissions yet.</p>';
+                return;
+            }
+
+            list.innerHTML = submissions.map(sub => `
+                <div class="card" style="margin-bottom:20px;">
+                    <h4>Learner ID: ${sub.studentId}</h4>
+
+                    <p><strong>Submission:</strong></p>
+                    <p>${sub.submissionContent}</p>
+
+                    <div class="form-group">
+                        <label>Marks</label>
+                        <input type="number"
+                               id="marks-${sub.id}"
+                               value="${sub.marks ?? ''}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Feedback</label>
+                        <textarea id="feedback-${sub.id}"
+                                  rows="3">${sub.feedback || ''}</textarea>
+                    </div>
+
+                    <button class="btn-primary"
+                            onclick="grade('${sub.id}')">
+                        Save Grade
+                    </button>
+                </div>
+            `).join('');
+        } catch {
+            showMessage('Failed to load submissions', 'error');
+        }
+    }
+
+    // ===== GRADE =====
+    async function grade(submissionId) {
+        const marks = document.getElementById(`marks-${submissionId}`).value;
+        const feedback = document.getElementById(`feedback-${submissionId}`).value;
+
+        if (marks === '') {
+            showMessage('Marks required', 'error');
+            return;
+        }
+
+        try {
+            await gradeSubmission(submissionId, marks, feedback);
+            showMessage('Grade saved', 'success');
+        } catch {
+            showMessage('Failed to save grade', 'error');
+        }
+    }
+
+    loadAssessment();
+    loadSubmissions();
+</script>
+
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learner Dashboard - Edu Fairuzullah LMS</title>
+    <title>My Courses - Edu Fairuzullah LMS</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -11,14 +11,13 @@
 <div class="container">
     <header>
         <h1>🎓 Edu Fairuzullah</h1>
-        <p>Learner Dashboard</p>
+        <p>Learner - My Courses</p>
     </header>
 
     <nav>
         <div class="nav-links">
-            <a href="learner-dashboard.html" class="active">Dashboard</a>
-            <a href="learner-my-courses.html">My Courses</a>
-            <a href="educator-view-users.html">View Users</a>
+            <a href="learner-dashboard.html">Dashboard</a>
+            <a href="learner-my-courses.html" class="active">My Courses</a>
         </div>
         <div class="user-info">
             <span id="userName"></span>
@@ -29,9 +28,9 @@
     <div class="content">
         <div id="message"></div>
 
-        <h2>Available Courses</h2>
+        <h2>My Enrolled Courses</h2>
 
-        <div id="coursesList" class="grid"></div>
+        <div id="myCoursesList" class="grid"></div>
     </div>
 </div>
 
@@ -56,54 +55,68 @@
     document.getElementById('userName').textContent =
         `${user.name} (${user.role})`;
 
-    // ===== LOAD COURSES =====
-    async function loadCourses() {
+    // ===== LOAD ENROLLED COURSES =====
+    async function loadMyCourses() {
         try {
             const courses = await getCourses();
-            const list = document.getElementById('coursesList');
+            const list = document.getElementById('myCoursesList');
 
-            if (!courses.length) {
+            // Filter enrolled courses
+            const enrolledCourses = courses.filter(course =>
+                Array.isArray(course.enrolledStudents) &&
+                course.enrolledStudents.includes(user.uid)
+            );
+
+            if (!enrolledCourses.length) {
                 list.innerHTML = `
                     <div class="empty-state">
-                        <h3>No courses available</h3>
-                        <p>Please check again later.</p>
+                        <h3>No enrolled courses</h3>
+                        <p>You have not enrolled in any courses yet.</p>
+                        <a href="learner-dashboard.html" class="btn-primary">
+                            Browse Courses
+                        </a>
                     </div>`;
                 return;
             }
 
-            list.innerHTML = courses.map(course => `
+            list.innerHTML = enrolledCourses.map(course => `
                 <div class="card">
                     <h3>${course.title}</h3>
                     <p>${course.description || 'No description'}</p>
                     <p><strong>Educator:</strong> ${course.educatorName || 'N/A'}</p>
+
                     <div class="card-actions">
-                        <button class="btn-primary"
-                                onclick="enrollCourse('${course.id}')">
-                            Enroll
-                        </button>
                         <a href="learner-course-details.html?courseId=${course.id}"
                            class="btn-view">
-                            View Details
+                            View Course
                         </a>
+                        <button class="btn-delete"
+                                onclick="unenroll('${course.id}')">
+                            Unenroll
+                        </button>
                     </div>
                 </div>
             `).join('');
+
         } catch (error) {
-            showMessage('Failed to load courses', 'error');
+            showMessage('Failed to load enrolled courses', 'error');
         }
     }
 
-    // ===== ENROLL COURSE =====
-    async function enrollCourse(courseId) {
+    // ===== UNENROLL COURSE =====
+    async function unenroll(courseId) {
+        if (!confirm('Are you sure you want to unenroll from this course?')) return;
+
         try {
-            await enrollStudent(courseId, user.uid);
-            showMessage('Enrolled successfully!', 'success');
+            await unenrollStudent(courseId, user.uid);
+            showMessage('Unenrolled successfully', 'success');
+            loadMyCourses();
         } catch (error) {
-            showMessage('Enrollment failed', 'error');
+            showMessage('Failed to unenroll', 'error');
         }
     }
 
-    loadCourses();
+    loadMyCourses();
 </script>
 
 </body>
