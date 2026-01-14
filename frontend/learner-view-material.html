@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Details - Edu Fairuzullah LMS</title>
+    <title>Learning Materials - Edu Fairuzullah LMS</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     <!-- HEADER -->
     <header>
         <h1>🎓 Edu Fairuzullah</h1>
-        <p>Learner - Course Details</p>
+        <p>Learner - Learning Materials</p>
     </header>
 
     <!-- NAVIGATION -->
@@ -21,7 +21,7 @@
         <div class="nav-links">
             <a href="learner-dashboard.html">Dashboard</a>
             <a href="learner-my-courses.html">My Courses</a>
-            <a href="#" class="active">Course Details</a>
+            <a href="#" class="active">Materials</a>
         </div>
         <div class="user-info">
             <span id="userName"></span>
@@ -33,24 +33,21 @@
     <div class="content">
         <div id="message"></div>
 
-        <!-- COURSE INFO -->
+        <!-- COURSE TITLE -->
         <div class="card">
             <h2 id="courseTitle">Course</h2>
             <p id="courseDescription"></p>
-            <p><strong>Educator:</strong> <span id="courseEducator"></span></p>
-
-            <!-- VIEW MATERIALS BUTTON -->
-            <div class="card-actions" style="margin-top:15px;">
-                <a id="viewMaterialsBtn" class="btn-primary">
-                    View Learning Materials
-                </a>
-            </div>
         </div>
 
-        <!-- ASSESSMENTS -->
+        <!-- MATERIALS -->
         <div class="card">
-            <h3>Assessments</h3>
-            <div id="assessmentsList" class="grid"></div>
+            <h3>Learning Materials</h3>
+            <div id="materialsList"></div>
+        </div>
+
+        <!-- BACK -->
+        <div class="card-actions">
+            <a id="backBtn" class="btn-view">Back to Course</a>
         </div>
     </div>
 
@@ -62,7 +59,7 @@
 <script src="js/auth.js"></script>
 
 <script>
-    /* ================= AUTH CHECK ================= */
+    /* ================= AUTH ================= */
     if (!requireAuth()) {
         window.location.href = 'login.html';
     }
@@ -87,61 +84,56 @@
         }, 1500);
     }
 
-    document.getElementById('viewMaterialsBtn').href =
-        `learner-view-material.html?courseId=${courseId}`;
+    document.getElementById('backBtn').href =
+        `learner-course-details.html?courseId=${courseId}`;
 
     /* ================= LOAD COURSE ================= */
     async function loadCourse() {
         try {
             const course = await getCourse(courseId);
-
-            document.getElementById('courseTitle').textContent =
-                course.title;
+            document.getElementById('courseTitle').textContent = course.title;
             document.getElementById('courseDescription').textContent =
                 course.description || 'No description';
-            document.getElementById('courseEducator').textContent =
-                course.educatorName || 'N/A';
         } catch {
             showMessage('Failed to load course', 'error');
         }
     }
 
-    /* ================= LOAD ASSESSMENTS ================= */
-    async function loadAssessments() {
+    /* ================= LOAD MATERIALS ================= */
+    async function loadMaterials() {
         try {
-            const assessments = await getAssessments(courseId);
-            const list = document.getElementById('assessmentsList');
+            const materials = await getMaterials(courseId);
+            const list = document.getElementById('materialsList');
 
-            if (!assessments.length) {
-                list.innerHTML = `
-                    <div class="empty-state">
-                        <p>No assessments available for this course.</p>
-                    </div>`;
+            if (!materials.length) {
+                list.innerHTML = '<p>No learning materials available.</p>';
                 return;
             }
 
-            list.innerHTML = assessments.map(a => `
-                <div class="card">
-                    <h4>${a.title}</h4>
-                    <p>${a.description || 'No description'}</p>
-                    <p><strong>Total Marks:</strong> ${a.totalMarks || 'N/A'}</p>
+            list.innerHTML = materials.map(m => `
+                <div class="card" style="margin-bottom:15px;">
+                    <h4>${m.title}</h4>
+                    <p><strong>Type:</strong> ${m.type}</p>
 
-                    <div class="card-actions">
-                        <a href="learner-assessment-submit.html?courseId=${courseId}&assessmentId=${a.id}"
-                           class="btn-primary">
-                            Submit / View Submission
-                        </a>
-                    </div>
+                    ${
+                        m.type === 'link'
+                        ? `<a href="${m.content}"
+                               target="_blank"
+                               class="btn-primary">
+                               Open Link
+                           </a>`
+                        : `<p>${m.content}</p>`
+                    }
                 </div>
             `).join('');
         } catch {
-            showMessage('Failed to load assessments', 'error');
+            showMessage('Failed to load materials', 'error');
         }
     }
 
     /* ================= INIT ================= */
     loadCourse();
-    loadAssessments();
+    loadMaterials();
 </script>
 
 </body>

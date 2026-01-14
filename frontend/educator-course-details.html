@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Course - Edu Fairuzullah LMS</title>
+    <title>Course Details - Edu Fairuzullah LMS</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
 <div class="container">
+
+    <!-- HEADER -->
     <header>
         <h1>🎓 Edu Fairuzullah</h1>
-        <p>Educator - Course Management</p>
+        <p>Educator - Course Details</p>
     </header>
 
+    <!-- NAVIGATION -->
     <nav>
         <div class="nav-links">
             <a href="educator-dashboard.html">Dashboard</a>
@@ -22,10 +25,11 @@
         </div>
         <div class="user-info">
             <span id="userName"></span>
-            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+            <button onclick="logout()" class="btn-danger">Logout</button>
         </div>
     </nav>
 
+    <!-- CONTENT -->
     <div class="content">
         <div id="message"></div>
 
@@ -36,73 +40,43 @@
             <p><strong>Category:</strong> <span id="courseCategory"></span></p>
         </div>
 
-        <!-- CREATE ASSESSMENT -->
+        <!-- ASSESSMENTS SECTION -->
         <div class="card">
-            <h3>Create Assessment</h3>
-
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" id="assessmentTitle">
+            <div class="card-actions" style="margin-bottom:15px;">
+                <a id="addAssessmentBtn" class="btn-primary">
+                    Add New Assessment
+                </a>
             </div>
 
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="assessmentDescription" rows="3"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Total Marks</label>
-                <input type="number" id="totalMarks">
-            </div>
-
-            <button class="btn-primary" onclick="createAssessmentHandler()">
-                Create Assessment
-            </button>
-        </div>
-
-        <!-- ASSESSMENTS LIST -->
-        <div class="card">
             <h3>Assessments</h3>
             <div id="assessmentsList" class="grid"></div>
         </div>
 
-        <!-- CREATE MATERIAL -->
+        <!-- MATERIALS SECTION -->
         <div class="card">
-            <h3>Add Material</h3>
-
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" id="materialTitle">
+            <div class="card-actions" style="margin-bottom:15px;">
+                <a id="addMaterialBtn" class="btn-primary">
+                    Add New Material
+                </a>
             </div>
 
-            <div class="form-group">
-                <label>Content / Link</label>
-                <textarea id="materialContent" rows="3"></textarea>
-            </div>
-
-            <button class="btn-primary" onclick="createMaterialHandler()">
-                Add Material
-            </button>
-        </div>
-
-        <!-- MATERIALS LIST -->
-        <div class="card">
             <h3>Materials</h3>
             <div id="materialsList" class="grid"></div>
         </div>
     </div>
+
 </div>
 
-<!-- Scripts -->
+<!-- SCRIPTS -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 
 <script>
-    // ===== AUTH CHECK =====
+    /* ================= AUTH ================= */
     if (!requireAuth()) {
-    window.location.href = 'login.html';
-}
+        window.location.href = 'login.html';
+    }
 
     const user = getCurrentUser();
     if (user.role !== 'educator') {
@@ -113,7 +87,7 @@
     document.getElementById('userName').textContent =
         `${user.name} (${user.role})`;
 
-    // ===== URL PARAM =====
+    /* ================= COURSE ID ================= */
     const params = new URLSearchParams(window.location.search);
     const courseId = params.get('courseId');
 
@@ -124,12 +98,17 @@
         }, 1500);
     }
 
-    // ===== LOAD COURSE =====
+    document.getElementById('addAssessmentBtn').href =
+        `educator-create-assessment.html?courseId=${courseId}`;
+
+    document.getElementById('addMaterialBtn').href =
+        `educator-create-material.html?courseId=${courseId}`;
+
+    /* ================= LOAD COURSE ================= */
     async function loadCourse() {
         try {
             const course = await getCourse(courseId);
 
-            // Ownership check
             if (course.educatorId !== user.uid) {
                 showMessage('Unauthorized access', 'error');
                 setTimeout(logout, 1500);
@@ -145,7 +124,7 @@
         }
     }
 
-    // ===== ASSESSMENTS =====
+    /* ================= ASSESSMENTS ================= */
     async function loadAssessments() {
         try {
             const assessments = await getAssessments(courseId);
@@ -158,17 +137,18 @@
 
             list.innerHTML = assessments.map(a => `
                 <div class="card">
-                    <h3>${a.title}</h3>
+                    <h4>${a.title}</h4>
                     <p>${a.description || ''}</p>
-                    <p><strong>Marks:</strong> ${a.totalMarks}</p>
+                    <p><strong>Total Marks:</strong> ${a.totalMarks}</p>
 
                     <div class="card-actions">
                         <a href="educator-grade.html?assessmentId=${a.id}&courseId=${courseId}"
                            class="btn-view">
                             View Submissions
                         </a>
+
                         <button class="btn-delete"
-                                onclick="deleteAssessmentHandler('${a.id}')">
+                                onclick="deleteAssessment('${a.id}')">
                             Delete
                         </button>
                     </div>
@@ -179,35 +159,7 @@
         }
     }
 
-    async function createAssessmentHandler() {
-        const title = document.getElementById('assessmentTitle').value.trim();
-        const description = document.getElementById('assessmentDescription').value.trim();
-        const totalMarks = document.getElementById('totalMarks').value;
-
-        if (!title || !totalMarks) {
-            showMessage('Title and marks are required', 'error');
-            return;
-        }
-
-        try {
-            await createAssessment(courseId, {
-                title,
-                description,
-                totalMarks
-            });
-
-            showMessage('Assessment created', 'success');
-            document.getElementById('assessmentTitle').value = '';
-            document.getElementById('assessmentDescription').value = '';
-            document.getElementById('totalMarks').value = '';
-
-            loadAssessments();
-        } catch {
-            showMessage('Failed to create assessment', 'error');
-        }
-    }
-
-    async function deleteAssessmentHandler(id) {
+    async function deleteAssessment(id) {
         if (!confirm('Delete this assessment?')) return;
 
         try {
@@ -218,11 +170,11 @@
             showMessage('Assessment deleted', 'success');
             loadAssessments();
         } catch {
-            showMessage('Delete failed', 'error');
+            showMessage('Failed to delete assessment', 'error');
         }
     }
 
-    // ===== MATERIALS =====
+    /* ================= MATERIALS ================= */
     async function loadMaterials() {
         try {
             const materials = await getMaterials(courseId);
@@ -235,12 +187,12 @@
 
             list.innerHTML = materials.map(m => `
                 <div class="card">
-                    <h3>${m.title}</h3>
+                    <h4>${m.title}</h4>
                     <p>${m.content}</p>
 
                     <div class="card-actions">
                         <button class="btn-delete"
-                                onclick="deleteMaterialHandler('${m.id}')">
+                                onclick="deleteMaterial('${m.id}')">
                             Delete
                         </button>
                     </div>
@@ -251,40 +203,19 @@
         }
     }
 
-    async function createMaterialHandler() {
-        const title = document.getElementById('materialTitle').value.trim();
-        const content = document.getElementById('materialContent').value.trim();
-
-        if (!title || !content) {
-            showMessage('All fields are required', 'error');
-            return;
-        }
-
-        try {
-            await createMaterial(courseId, { title, content });
-
-            showMessage('Material added', 'success');
-            document.getElementById('materialTitle').value = '';
-            document.getElementById('materialContent').value = '';
-
-            loadMaterials();
-        } catch {
-            showMessage('Failed to add material', 'error');
-        }
-    }
-
-    async function deleteMaterialHandler(id) {
+    async function deleteMaterial(id) {
         if (!confirm('Delete this material?')) return;
 
         try {
-            await deleteMaterial(courseId, id);
+            await deleteMaterialApi(courseId, id);
             showMessage('Material deleted', 'success');
             loadMaterials();
         } catch {
-            showMessage('Delete failed', 'error');
+            showMessage('Failed to delete material', 'error');
         }
     }
 
+    /* ================= INIT ================= */
     loadCourse();
     loadAssessments();
     loadMaterials();

@@ -76,8 +76,8 @@
     <script>
         // Check authentication
         if (!requireAuth()) {
-    window.location.href = 'login.html';
-}
+            window.location.href = 'login.html';
+        }
 
         const user = getCurrentUser();
         document.getElementById('userName').textContent = `${user.name} (${user.role})`;

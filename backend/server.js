@@ -531,3 +531,24 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Edu Fairuzullah LMS server running on port ${PORT}`);
 });
+
+// Unenroll Student from Course
+app.post('/api/courses/:id/unenroll', async (req, res) => {
+    try {
+        const { studentId } = req.body;
+        const courseId = req.params.id;
+
+        if (!studentId) {
+            return res.status(400).json({ error: 'Student ID is required' });
+        }
+
+        // Remove student from course
+        await db.collection('courses').doc(courseId).update({
+            enrolledStudents: admin.firestore.FieldValue.arrayRemove(studentId)
+        });
+
+        res.json({ message: 'Student unenrolled successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});

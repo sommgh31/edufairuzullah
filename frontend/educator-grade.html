@@ -51,7 +51,9 @@
 
 <script>
     // ===== AUTH CHECK =====
-    if (!requireAuth()) return;
+    if (!requireAuth()) {
+        window.location.href = 'login.html';
+    }
 
     const user = getCurrentUser();
     if (user.role !== 'educator') {

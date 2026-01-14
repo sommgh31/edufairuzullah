@@ -9,11 +9,14 @@
 <body>
 
 <div class="container">
+
+    <!-- HEADER -->
     <header>
         <h1>🎓 Edu Fairuzullah</h1>
         <p>Learner - Assessment Submission</p>
     </header>
 
+    <!-- NAVIGATION -->
     <nav>
         <div class="nav-links">
             <a href="learner-dashboard.html">Dashboard</a>
@@ -22,10 +25,11 @@
         </div>
         <div class="user-info">
             <span id="userName"></span>
-            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+            <button onclick="logout()" class="btn-danger">Logout</button>
         </div>
     </nav>
 
+    <!-- CONTENT -->
     <div class="content">
         <div id="message"></div>
 
@@ -45,40 +49,36 @@
                       placeholder="Enter your submission here..."></textarea>
 
             <div class="card-actions" style="margin-top:15px;">
-                <button id="submitBtn" class="btn-primary"
-                        onclick="submit()">
+                <button id="submitBtn" class="btn-primary">
                     Submit
                 </button>
 
-                <button id="updateBtn" class="btn-primary"
-                        onclick="update()"
-                        style="display:none;">
+                <button id="updateBtn" class="btn-primary" style="display:none;">
                     Update
                 </button>
 
-                <button id="deleteBtn" class="btn-delete"
-                        onclick="removeSubmission()"
-                        style="display:none;">
+                <button id="deleteBtn" class="btn-delete" style="display:none;">
                     Delete
                 </button>
             </div>
         </div>
     </div>
+
 </div>
 
-<!-- Scripts -->
+<!-- SCRIPTS -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 
 <script>
-    // ===== AUTH CHECK =====
+    /* ================= AUTH CHECK ================= */
     if (!requireAuth()) {
-    window.location.href = 'login.html';
-}
-
+        window.location.href = 'login.html';
+    }
 
     const user = getCurrentUser();
+
     if (user.role !== 'learner') {
         showMessage('Access denied', 'error');
         setTimeout(logout, 1500);
@@ -87,7 +87,7 @@
     document.getElementById('userName').textContent =
         `${user.name} (${user.role})`;
 
-    // ===== URL PARAMS =====
+    /* ================= URL PARAMS ================= */
     const params = new URLSearchParams(window.location.search);
     const courseId = params.get('courseId');
     const assessmentId = params.get('assessmentId');
@@ -101,13 +101,15 @@
 
     let submissionId = null;
 
-    // ===== LOAD ASSESSMENT =====
+    /* ================= LOAD ASSESSMENT ================= */
     async function loadAssessment() {
         try {
             const assessments = await getAssessments(courseId);
             const assessment = assessments.find(a => a.id === assessmentId);
 
-            if (!assessment) throw new Error();
+            if (!assessment) {
+                throw new Error('Assessment not found');
+            }
 
             document.getElementById('assessmentTitle').textContent =
                 assessment.title;
@@ -116,12 +118,12 @@
             document.getElementById('totalMarks').textContent =
                 assessment.totalMarks || 'N/A';
 
-        } catch {
+        } catch (error) {
             showMessage('Assessment not found', 'error');
         }
     }
 
-    // ===== LOAD SUBMISSION =====
+    /* ================= LOAD SUBMISSION ================= */
     async function loadSubmission() {
         try {
             const submissions = await getSubmissions(
@@ -142,12 +144,12 @@
                 document.getElementById('deleteBtn').style.display = 'inline-block';
             }
         } catch {
-            // No submission yet (normal case)
+            // No submission yet (valid state)
         }
     }
 
-    // ===== SUBMIT =====
-    async function submit() {
+    /* ================= SUBMIT ================= */
+    async function submitAssessmentHandler() {
         const content =
             document.getElementById('submissionContent').value.trim();
 
@@ -169,8 +171,8 @@
         }
     }
 
-    // ===== UPDATE =====
-    async function update() {
+    /* ================= UPDATE ================= */
+    async function updateSubmissionHandler() {
         const content =
             document.getElementById('submissionContent').value.trim();
 
@@ -190,8 +192,8 @@
         }
     }
 
-    // ===== DELETE =====
-    async function removeSubmission() {
+    /* ================= DELETE ================= */
+    async function deleteSubmissionHandler() {
         if (!confirm('Delete this submission?')) return;
 
         try {
@@ -209,8 +211,21 @@
         }
     }
 
-    loadAssessment();
-    loadSubmission();
+    /* ================= BUTTON EVENTS ================= */
+    document.getElementById('submitBtn')
+        .addEventListener('click', submitAssessmentHandler);
+
+    document.getElementById('updateBtn')
+        .addEventListener('click', updateSubmissionHandler);
+
+    document.getElementById('deleteBtn')
+        .addEventListener('click', deleteSubmissionHandler);
+
+    /* ================= INIT ================= */
+    if (courseId && assessmentId) {
+        loadAssessment();
+        loadSubmission();
+    }
 </script>
 
 </body>

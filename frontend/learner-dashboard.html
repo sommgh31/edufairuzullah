@@ -9,23 +9,26 @@
 <body>
 
 <div class="container">
+
+    <!-- HEADER -->
     <header>
         <h1>🎓 Edu Fairuzullah</h1>
         <p>Learner Dashboard</p>
     </header>
 
+    <!-- NAVIGATION -->
     <nav>
         <div class="nav-links">
             <a href="learner-dashboard.html" class="active">Dashboard</a>
             <a href="learner-my-courses.html">My Courses</a>
-            <a href="educator-view-users.html">View Users</a>
         </div>
         <div class="user-info">
             <span id="userName"></span>
-            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+            <button onclick="logout()" class="btn-danger">Logout</button>
         </div>
     </nav>
 
+    <!-- CONTENT -->
     <div class="content">
         <div id="message"></div>
 
@@ -33,9 +36,10 @@
 
         <div id="coursesList" class="grid"></div>
     </div>
+
 </div>
 
-<!-- Scripts -->
+<!-- SCRIPTS -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
@@ -43,11 +47,11 @@
 <script>
     // ===== AUTH CHECK =====
     if (!requireAuth()) {
-    window.location.href = 'login.html';
-}
-
+        window.location.href = 'login.html';
+    }
 
     const user = getCurrentUser();
+
     if (user.role !== 'learner') {
         showMessage('Access denied', 'error');
         setTimeout(logout, 1500);
@@ -67,41 +71,63 @@
                     <div class="empty-state">
                         <h3>No courses available</h3>
                         <p>Please check again later.</p>
-                    </div>`;
+                    </div>
+                `;
                 return;
             }
 
-            list.innerHTML = courses.map(course => `
-                <div class="card">
-                    <h3>${course.title}</h3>
-                    <p>${course.description || 'No description'}</p>
-                    <p><strong>Educator:</strong> ${course.educatorName || 'N/A'}</p>
-                    <div class="card-actions">
-                        <button class="btn-primary"
-                                onclick="enrollCourse('${course.id}')">
-                            Enroll
-                        </button>
-                        <a href="learner-course-details.html?courseId=${course.id}"
-                           class="btn-view">
-                            View Details
-                        </a>
+            list.innerHTML = courses.map(course => {
+                const isEnrolled =
+                    Array.isArray(course.enrolledStudents) &&
+                    course.enrolledStudents.includes(user.uid);
+
+                return `
+                    <div class="card">
+                        <h3>${course.title}</h3>
+                        <p>${course.description || 'No description'}</p>
+                        <p><strong>Educator:</strong> ${course.educatorName || 'N/A'}</p>
+
+                        <div class="card-actions">
+                            ${
+                                isEnrolled
+                                    ? `<button class="btn-primary btn-enrolled" disabled>
+                                            Enrolled
+                                        </button>`
+                                    : `<button class="btn-primary"
+                                               onclick="enrollCourse('${course.id}', this)">
+                                               Enroll
+                                       </button>`
+                            }
+
+                            <a href="learner-course-details.html?courseId=${course.id}"
+                               class="btn-view">
+                                View Details
+                            </a>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+
         } catch (error) {
             showMessage('Failed to load courses', 'error');
         }
     }
 
     // ===== ENROLL COURSE =====
-    async function enrollCourse(courseId) {
-        try {
-            await enrollStudent(courseId, user.uid);
-            showMessage('Enrolled successfully!', 'success');
-        } catch (error) {
-            showMessage('Enrollment failed', 'error');
-        }
+    async function enrollCourse(courseId, button) {
+    try {
+        await enrollStudent(courseId, user.uid);
+
+        // Update button UI instantly (KEEP original style)
+        button.textContent = 'Enrolled';
+        button.classList.add('btn-enrolled'); // 👈 ADD, don't replace
+        button.disabled = true;
+
+        showMessage('Enrolled successfully!', 'success');
+    } catch (error) {
+        showMessage('Enrollment failed', 'error');
     }
+}
 
     loadCourses();
 </script>

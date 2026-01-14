@@ -223,6 +223,11 @@ button[type="submit"]:hover, .btn-primary:hover {
     background: #138496;
 }
 
+.btn-primary.btn-enrolled {
+    background-color: #adb5bd; /* grey */
+    cursor: not-allowed;
+}
+
 .alert {
     padding: 15px;
     border-radius: 8px;
@@ -349,6 +354,13 @@ button[type="submit"]:hover, .btn-primary:hover {
     font-size: 1.4rem;
     font-weight: 600;
     color: #2c2f4a;
+}
+
+.btn-enrolled {
+    background-color: #adb5bd; /* grey */
+    color: #ffffff;
+    cursor: not-allowed;
+    border: none;
 }
 
 /* Responsive */

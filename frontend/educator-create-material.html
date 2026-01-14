@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Material - Edu Fairuzullah LMS</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <header>
+        <h1>🎓 Edu Fairuzullah</h1>
+        <p>Educator - Add Material</p>
+    </header>
+
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="nav-links">
+            <a href="educator-dashboard.html">Dashboard</a>
+            <a href="educator-my-courses.html">My Courses</a>
+            <a href="#" class="active">Add Material</a>
+        </div>
+        <div class="user-info">
+            <span id="userName"></span>
+            <button onclick="logout()" class="btn-danger">Logout</button>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="content">
+        <div id="message"></div>
+
+        <div class="card">
+            <h3>Create Learning Material</h3>
+
+            <!-- TITLE -->
+            <div class="form-group">
+                <label for="materialTitle">Title</label>
+                <input type="text" id="materialTitle" placeholder="e.g. Week 1 Slides">
+            </div>
+
+            <!-- MATERIAL TYPE -->
+            <div class="form-group">
+                <label for="materialType">Material Type</label>
+                <select id="materialType">
+                    <option value="">-- Select Material Type --</option>
+                    <option value="text">Text</option>
+                    <option value="link">Link</option>
+                    <option value="video">Video</option>
+                    <option value="document">Document</option>
+                </select>
+            </div>
+
+            <!-- CONTENT / LINK -->
+            <div class="form-group">
+                <label for="materialContent">Content / Link</label>
+                <textarea id="materialContent"
+                          rows="4"
+                          placeholder="Enter material content or link here..."></textarea>
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="card-actions">
+                <button class="btn-primary" onclick="createMaterialHandler()">
+                    Save Material
+                </button>
+
+                <a id="backBtn" class="btn-view">
+                    Back to Course
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+    /* ================= AUTH CHECK ================= */
+    if (!requireAuth()) {
+        window.location.href = 'login.html';
+    }
+
+    const user = getCurrentUser();
+    if (user.role !== 'educator') {
+        showMessage('Access denied', 'error');
+        setTimeout(logout, 1500);
+    }
+
+    document.getElementById('userName').textContent =
+        `${user.name} (${user.role})`;
+
+    /* ================= COURSE ID ================= */
+    const params = new URLSearchParams(window.location.search);
+    const courseId = params.get('courseId');
+
+    if (!courseId) {
+        showMessage('Invalid course', 'error');
+        setTimeout(() => {
+            window.location.href = 'educator-my-courses.html';
+        }, 1500);
+    }
+
+    document.getElementById('backBtn').href =
+        `educator-course-details.html?courseId=${courseId}`;
+
+    /* ================= CREATE MATERIAL ================= */
+    async function createMaterialHandler() {
+        const title =
+            document.getElementById('materialTitle').value.trim();
+        const type =
+            document.getElementById('materialType').value;
+        const content =
+            document.getElementById('materialContent').value.trim();
+
+        if (!title || !type || !content) {
+            showMessage('All fields are required', 'error');
+            return;
+        }
+
+        try {
+            await createMaterial(courseId, {
+                title,
+                type,
+                content
+            });
+
+            showMessage('Material created successfully', 'success');
+
+            setTimeout(() => {
+                window.location.href =
+                    `educator-course-details.html?courseId=${courseId}`;
+            }, 1000);
+
+        } catch (error) {
+            showMessage('Failed to add material', 'error');
+        }
+    }
+</script>
+
+</body>
+</html>
