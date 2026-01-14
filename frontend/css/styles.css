@@ -344,6 +344,13 @@ button[type="submit"]:hover, .btn-primary:hover {
     color: white;
 }
 
+.section-title {
+    margin: 0 0 12px 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #2c2f4a;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     nav {
