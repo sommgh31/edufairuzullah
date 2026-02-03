@@ -2,38 +2,21 @@
 // API Client (Safe & Centralized)
 // ===============================
 
-function API_BASE() {
-    const stored = localStorage.getItem('apiBaseUrl');
-    return stored && stored.trim()
-        ? stored.trim()
-        : 'http://localhost:3000';
-}
+const API_BASE_URL =
+  localStorage.getItem('apiBaseUrl') ||
+  'https://edufairuzullah-backend-1018502007634.asia-southeast1.run.app';
 
-/**
- * Centralized fetch wrapper
- */
 async function apiFetch(endpoint, options = {}) {
-    try {
-        const response = await fetch(`${API_BASE()}${endpoint}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...(options.headers || {})
-            },
-            ...options
-        });
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'API request failed');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('API error:', error.message);
-        throw error;
-    }
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'API error');
+  return data;
 }
+
 
 // ================= USER API =================
 

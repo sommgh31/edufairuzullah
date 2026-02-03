@@ -1,72 +1,110 @@
-// Authentication functions
-// Note: Since the backend uses Firebase Admin SDK, we'll use a simple authentication
-// system that stores user info in localStorage after registration/login
-// In production, you should integrate with Firebase Client SDK for proper authentication
+// auth.js (Firebase-based authentication – PROPER VERSION)
 
-async function register(name, email, password, role) {
-    try {
-        const result = await createUser({ name, email, password, role });
-        
-        if (result.user) {
-            // Store user info in localStorage
-            const userData = {
-                uid: result.user.uid,
-                name: result.user.name,
-                email: result.user.email,
-                role: result.user.role
-            };
-            localStorage.setItem('currentUser', JSON.stringify(userData));
-            return { success: true, user: userData };
-        } else {
-            return { success: false, error: result.error || 'Registration failed' };
-        }
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-}
+import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// Simple login - in production, use Firebase Auth
-// For now, we'll check if user exists and allow login
-async function login(email, password) {
+import {
+    getFirestore,
+    doc,
+    setDoc,
+    getDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import { app } from "./firebase-init.js";
+
+// ===== INIT =====
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ===== REGISTER =====
+export async function register(name, email, password, role) {
     try {
-        // Get all users and find matching email
-        const users = await getUsers();
-        const user = users.find(u => u.email === email);
-        
-        if (!user) {
-            return { success: false, error: 'User not found' };
-        }
-        
-        // In production, verify password with Firebase Auth
-        // For now, we'll just check if user exists
+        // 1️⃣ Create Firebase Auth user
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        const user = cred.user;
+
+        // 2️⃣ Save extra data (role, name) in Firestore
+        await setDoc(doc(db, "users", user.uid), {
+            name,
+            email,
+            role,
+            createdAt: new Date()
+        });
+
+        // 3️⃣ Save session locally (optional but useful)
         const userData = {
-            uid: user.uid || user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
+            uid: user.uid,
+            email,
+            name,
+            role
         };
-        
-        localStorage.setItem('currentUser', JSON.stringify(userData));
+
+        localStorage.setItem("currentUser", JSON.stringify(userData));
+
         return { success: true, user: userData };
+
     } catch (error) {
         return { success: false, error: error.message };
     }
 }
 
-function isAuthenticated() {
-    const user = localStorage.getItem('currentUser');
-    return user !== null;
-}
+// ===== LOGIN =====
+export async function login(email, password) {
+    try {
+        // 1️⃣ Firebase Auth login
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const user = cred.user;
 
-function getCurrentUser() {
-    const userStr = localStorage.getItem('currentUser');
-    return userStr ? JSON.parse(userStr) : null;
-}
+        // 2️⃣ Get role & name from Firestore
+        const snap = await getDoc(doc(db, "users", user.uid));
 
-function requireAuth() {
-    if (!isAuthenticated()) {
-        window.location.href = 'login.html';
-        return false;
+        if (!snap.exists()) {
+            throw new Error("User profile not found");
+        }
+
+        const profile = snap.data();
+
+        const userData = {
+            uid: user.uid,
+            email: user.email,
+            name: profile.name,
+            role: profile.role
+        };
+
+        localStorage.setItem("currentUser", JSON.stringify(userData));
+
+        return { success: true, user: userData };
+
+    } catch (error) {
+        return { success: false, error: error.message };
     }
-    return true;
 }
+
+// ===== LOGOUT =====
+export async function logout() {
+    await signOut(auth);
+    localStorage.removeItem("currentUser");
+    window.location.href = "login.html";
+}
+
+// ===== SESSION HELPERS =====
+export function isAuthenticated() {
+    return !!localStorage.getItem("currentUser");
+}
+
+export function getCurrentUser() {
+    const user = localStorage.getItem("currentUser");
+    return user ? JSON.parse(user) : null;
+}
+
+// ===== AUTH STATE SYNC (optional but good practice) =====
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        localStorage.removeItem("currentUser");
+    }
+});

@@ -45,29 +45,23 @@
     </div>
 </div>
 
-<!-- Scripts -->
+<!-- Normal scripts (NO Firebase imports inside these) -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
-<script src="js/auth.js"></script>
 
-<script>
+<!-- Firebase + Auth (MODULES ONLY) -->
+<script type="module" src="js/firebase-init.js"></script>
+<script type="module" src="js/auth.js"></script>
+
+<script type="module">
+    import { register, isAuthenticated, getCurrentUser, logout } from './js/auth.js';
+
     // ===== AUTO REDIRECT IF ALREADY LOGGED IN =====
     if (isAuthenticated()) {
         const user = getCurrentUser();
         redirectByRole(user);
     }
 
-    function saveApiUrl() {
-        const url = document.getElementById('baseUrl').value.trim();
-        if (!url) {
-            showMessage('API URL cannot be empty', 'error');
-            return;
-        }
-        localStorage.setItem('apiBaseUrl', url);
-        showMessage('API URL saved successfully!', 'success');
-    }
-
-    // ===== REGISTER HANDLER =====
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -88,13 +82,12 @@
             showMessage('Registration successful! Redirecting...', 'success');
             setTimeout(() => {
                 redirectByRole(result.user);
-            }, 800);
+            }, 600);
         } else {
             showMessage(result.error || 'Registration failed', 'error');
         }
     });
 
-    // ===== ROLE-BASED REDIRECTION =====
     function redirectByRole(user) {
         if (!user || !user.role) {
             logout();
@@ -110,6 +103,3 @@
         }
     }
 </script>
-
-</body>
-</html>

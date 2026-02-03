@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Course - Edu Fairuzullah LMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <div class="container">
     <header>
         <h1>🎓 Edu Fairuzullah</h1>
-        <p>Educator - Create Course</p>
+        <p>Educator – Create Course</p>
     </header>
 
     <nav>
@@ -22,7 +22,7 @@
         </div>
         <div class="user-info">
             <span id="userName"></span>
-            <button onclick="logout()" style="background:#dc3545;">Logout</button>
+            <button id="logoutBtn" style="background:#dc3545;">Logout</button>
         </div>
     </nav>
 
@@ -49,55 +49,62 @@
             </div>
 
             <div class="card-actions">
-                <button
-                    type="button"
-                    class="btn-primary"
-                    onclick="createCourseHandler();">
+                <button type="button" id="createCourseBtn" class="btn-primary">
                     Create Course
                 </button>
-                <a href="educator-my-courses.html" class="btn-view">
-                    Cancel
-                </a>
+                <a href="educator-my-courses.html" class="btn-view">Cancel</a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Scripts -->
+<!-- GLOBAL SCRIPTS (NON-MODULE) -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
-<script src="js/auth.js"></script>
 
-<script>
-    console.log('Create Course page loaded'); //debug line
+<!-- AUTH (MODULE) -->
+<script type="module" src="js/firebase-init.js"></script>
+<script type="module">
+    import { isAuthenticated, getCurrentUser, logout } from './js/auth.js';
+
+    console.log('Create Course page loaded');
+
     // ===== AUTH CHECK =====
-if (!requireAuth()) {
-    window.location.href = 'login.html';
-}
+    if (!isAuthenticated()) {
+        window.location.href = 'login.html';
+    }
 
-const user = getCurrentUser();
-    console.log('Current user:', user); //debug line
-    if (user.role !== 'educator') {
-        showMessage('Access denied', 'error');
-        setTimeout(logout, 1500);
+    const user = getCurrentUser();
+    console.log('Current user:', user);
+
+    if (!user || user.role !== 'educator') {
+        alert('Access denied');
+        logout();
+        window.location.href = 'login.html';
     }
 
     document.getElementById('userName').textContent =
         `${user.name} (${user.role})`;
 
+    document.getElementById('logoutBtn').onclick = () => {
+        logout();
+        window.location.href = 'login.html';
+    };
+
     // ===== CREATE COURSE =====
-async function createCourseHandler() {
-    const title = document.getElementById('title').value.trim();
-    const description = document.getElementById('description').value.trim();
-    const category = document.getElementById('category').value.trim();
+    document.getElementById('createCourseBtn').addEventListener('click', async () => {
+        console.log('Create course clicked');
 
-    if (!title) {
-        showMessage('Course title is required', 'error');
-        return;
-    }
+        const title = document.getElementById('title').value.trim();
+        const description = document.getElementById('description').value.trim();
+        const category = document.getElementById('category').value.trim();
 
-    try {
-        await createCourse({
+        if (!title) {
+            showMessage('Course title is required', 'error');
+            return;
+        }
+
+        const courseData = {
             title,
             description,
             category,
@@ -105,20 +112,25 @@ async function createCourseHandler() {
             educatorName: user.name,
             enrolledStudents: [],
             createdAt: new Date().toISOString()
-        });
+        };
 
-        showMessage('Course created successfully!', 'success');
+        console.log('Sending course:', courseData);
 
-        setTimeout(() => {
-            window.location.href = 'educator-my-courses.html';
-        }, 1000);
+        try {
+            // 🔥 GLOBAL FUNCTION FROM api.js
+            await createCourse(courseData);
 
-    } catch (error) {
-        console.error(error);
-        showMessage(error.message || 'Failed to create course', 'error');
-    }
-}
+            showMessage('Course created successfully!', 'success');
 
+            setTimeout(() => {
+                window.location.href = 'educator-my-courses.html';
+            }, 800);
+
+        } catch (err) {
+            console.error(err);
+            showMessage(err.message || 'Failed to create course', 'error');
+        }
+    });
 </script>
 
 </body>
